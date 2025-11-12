@@ -1,10 +1,16 @@
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional, Annotated
-from src.enums import DealStatus, TaskStatus
+from src.enums import DealStatus, TaskStatus, UserRole
 import re
 
 PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?[()\d\s-]{7,20}$")]
+
+PASSWORD_REGEX = {
+    "letter": r"[a-zA-Z]",
+    "digit": r"[0-9]",
+    "special": r"[!.,_]"
+}
 
 # for use without pydantic.EmailStr:
 # email_patter = ^[\w_.+-]+@[\w\d-]+\.[\w\d-]{2,}$
@@ -12,7 +18,8 @@ PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?[()\d\s-]{7,20}$")]
 # --Users--
 
 class UserBase(BaseModel):
-    username: str = Field(max_length=50, min_length=6, strip_whitespace=True)
+    username: str = Field(max_length=50, min_length=2, strip_whitespace=True)
+    role: UserRole
 
 class UserRead(UserBase):
     id: int = Field(gt=0)
@@ -26,11 +33,11 @@ class UserCreate(UserBase):
     def password_strength_check(cls, value):
         if len(value) < 6:
             raise ValueError("Password must be at least 6 characters long")
-        if not re.search(r"[a-zA-Z]", value):
+        if not re.search(PASSWORD_REGEX["letter"], value):
             raise ValueError("Password must contain at least one letter")
-        if not re.search(r"[0-9]", value):
+        if not re.search(PASSWORD_REGEX["digit"], value):
             raise ValueError("Password must contain at least one number")
-        if not re.search(r"[!.,_]", value):
+        if not re.search(PASSWORD_REGEX["special"], value):
             raise ValueError("Password must contain at least one special symbols (!.,_)")
         return value
 

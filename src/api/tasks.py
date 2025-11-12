@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
-from src.database import Session, get_db
+from src.api.dependencies import get_db, Session
 
 from src.models import Base, Deal, Task
 from src.schemas import TaskRead, TaskCreate

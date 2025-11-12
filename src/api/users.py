@@ -1,12 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
+from src.api.dependencies import get_db, get_current_user, Session
 
-from src.database import Session, get_db
 from src.models import Base, User
 from src.schemas import UserCreate, UserRead
 
 router = APIRouter(tags=['Users'])
 
+@router.get("/users/me", response_model=UserRead)
+async def get_my_info(current_user: User = Depends(get_current_user)) -> UserRead:
+    return current_user
 
 @router.get("/users/get", response_model=List[UserRead])
 async def get_users(db: Session = Depends(get_db)) -> List[UserRead]:

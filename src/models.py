@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime
 from sqlalchemy.orm import relationship
 from src.database import Base
-from src.enums import DealStatus, TaskStatus
+from src.enums import DealStatus, TaskStatus, UserRole
 
 
 class User(Base):
@@ -10,6 +10,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     username = Column(String, nullable=False, index=True)
     password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), default="user")
     
 class Client(Base):
     __tablename__ = 'clients'
@@ -27,7 +28,7 @@ class Deal(Base):
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
     client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
     title = Column(String, nullable=False, index=True)
-    status = Column(Enum(DealStatus, name='deal_status'), nullable=False, index=True)
+    status = Column(Enum(DealStatus), nullable=False, index=True)
     value = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, index=True)
     closed_at = Column(DateTime, nullable=True, index=True)
@@ -39,7 +40,7 @@ class Task(Base):
     deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False, index=True)
     title = Column(String, nullable=False, index=True)
     description = Column(String, nullable=True)
-    status = Column(Enum(TaskStatus, name='task_status'), nullable=False, index=True)
+    status = Column(Enum(TaskStatus), nullable=False, index=True)
     due_date = Column(DateTime, index=True)
 
     deal = relationship('Deal')
