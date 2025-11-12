@@ -1,12 +1,11 @@
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, List
-from src.api.dependencies import get_db, Session
+from typing import List
+from src.api.dependencies import Session, get_db 
 
-from src.models import Base, Client, Deal
-from src.schemas import DealRead, DealCreate
+from src.models import Client, Deal
+from src.schemas.deal import DealRead, DealCreate
 
 router = APIRouter(tags=['Deals'])
-
 
 @router.get("/deals/get", response_model=List[DealRead])
 async def get_deals(db: Session = Depends(get_db)) -> List[DealRead]:

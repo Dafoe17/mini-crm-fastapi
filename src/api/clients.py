@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, List
-from src.api.dependencies import get_db, Session
+from typing import List
+from src.api.dependencies import Session, get_db 
 
-from src.models import Base, User, Client
-from src.schemas import ClientRead, ClientCreate
+from src.models import User, Client
+from src.schemas.client import ClientRead, ClientCreate
 
 
 router = APIRouter(tags=['Clients'])

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, List
+from typing import List
 from src.api.dependencies import get_db, Session
 
-from src.models import Base, Deal, Task
-from src.schemas import TaskRead, TaskCreate
+from src.models import Deal, Task
+from src.schemas.task import TaskRead, TaskCreate
 
 router = APIRouter(tags=['Tasks'])
 
