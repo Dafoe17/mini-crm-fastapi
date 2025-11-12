@@ -8,14 +8,12 @@ router = APIRouter(tags=["Auth"])
 
 @router.post("/auth/login")
 async def login(username: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-    ):
+                password: str = Form(...),
+                db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if user is None or not verify_password(password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Access token
     access_token = create_access_token(
         data={"sub": user.username, "role": user.role}
     )
