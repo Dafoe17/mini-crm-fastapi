@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Optional, List
-from src.api.dependencies import get_db, get_current_user, Session, require_roles
+from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
-from src.models import Base, User
+from src.models import User
 from src.schemas import UserCreate, UserRead, UserRole
 
 router = APIRouter(tags=['Users'])
@@ -35,7 +35,8 @@ async def create_user(user: UserCreate,
         raise HTTPException(status_code=404, detail="User already exists")
 
     db_user = User(username=user.username, 
-                   password=user.password)
+                   password=user.password,
+                   role=user.role)
     try:
         db.add(db_user)
         db.commit()
@@ -46,6 +47,25 @@ async def create_user(user: UserCreate,
         raise e
 
     return db_user
+
+@router.put("/users/update/{user_id}", response_model=UserRead)
+async def update_user(user_id: int, 
+                      user: UserCreate,
+                      db: Session = Depends(get_db),
+                      _: User = Depends(require_roles('admin'))
+                      ) -> UserRead:
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    user.username = user.username
+    user.password = user.password
+    user.role = user.role
+    
+    db.commit()
+    db.refresh(user)
+
+    return user
 
 @router.delete("/users/delete/{user_id}", response_model=List[UserRead])
 async def delete_user(user_id: int, 
@@ -59,4 +79,3 @@ async def delete_user(user_id: int,
     db.delete(user)
     db.commit()
     return db.query(User).all()
-
