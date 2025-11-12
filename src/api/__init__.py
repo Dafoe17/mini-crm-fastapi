@@ -10,10 +10,10 @@ from src.database import Base, engine
 
 main_router = APIRouter()
 
+main_router.include_router(auth_router)
 main_router.include_router(users_router)
 main_router.include_router(clients_router)
 main_router.include_router(deals_router)
 main_router.include_router(tasks_router)
-main_router.include_router(auth_router)
 
 Base.metadata.create_all(bind=engine)
