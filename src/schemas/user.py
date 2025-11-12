@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from src.enums import UserRole
 from src.core.security import hash_password
+from typing import List
 import re
 
 PASSWORD_REGEX = {
@@ -34,4 +35,15 @@ class UserCreate(UserBase):
         return hash_password(value)
 
 class UserUpdate(UserCreate):
+
     model_config = ConfigDict(partial=True)
+
+class StatusUsersResponse(BaseModel):
+    status: str
+    users: List[UserRead]
+
+class UsersListResponse(BaseModel):
+    total: int
+    skip: int | None
+    limit: int | None
+    users: List[UserRead]
