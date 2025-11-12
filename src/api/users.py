@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Optional, List
+from fastapi import APIRouter, HTTPException, Query, Depends
+from typing import List, Dict
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
 from src.models import User
-from src.schemas import UserCreate, UserRead, UserRole
+from src.schemas.user import UserCreate, UserRead, UsersListResponse, StatusUsersResponse, UserRole
 
 router = APIRouter(tags=['Users'])
 
@@ -11,21 +11,38 @@ router = APIRouter(tags=['Users'])
 async def get_my_info(current_user: User = Depends(get_current_user)) -> UserRead:
     return current_user
 
-@router.get("/users/get", response_model=List[UserRead])
+@router.get("/users/get", response_model=UsersListResponse)
 async def get_users(db: Session = Depends(get_db), 
-                    _: User = Depends(require_roles('admin', 'manager'))
-                    ) -> List[UserRead]:
-    return db.query(User).all()
+                    _: User = Depends(require_roles('admin', 'manager')),
+                    skip: int = Query(None, description="Number of users to skip"),
+                    limit: int = Query(None, description="Number of users to return")
+                    ) -> Dict:
+    total_users = db.query(User).count()
+    users = db.query(User).offset(skip).limit(limit).all()
+    return UsersListResponse(
+        total=total_users,
+        skip=skip,
+        limit=limit,
+        users=[UserRead.model_validate(user) for user in users]
+    )
 
-@router.get("/users/get/role/{user_role}", response_model=List[UserRead])
+@router.get("/users/get/role/{user_role}", response_model=UsersListResponse)
 async def get_users_by_role(user_role: UserRole, 
                             db: Session = Depends(get_db),
-                            _: User = Depends(require_roles('admin', 'manager'))
+                            _: User = Depends(require_roles('admin', 'manager')),
+                            skip: int = Query(None, description="Number of users to skip"),
+                            limit: int = Query(None, description="Number of users to return")
                             ) -> List[UserRead]:
-    users = db.query(User).filter(User.role == user_role).all()
-    return users
+    total_users = db.query(User).filter(User.role == user_role).count()
+    users = db.query(User).filter(User.role == user_role).offset(skip).limit(limit).all()
+    return UsersListResponse(
+        total=total_users,
+        skip=skip,
+        limit=limit,
+        users=[UserRead.model_validate(user) for user in users]
+    )
 
-@router.post("/users/add", response_model=UserRead)
+@router.post("/users/add", response_model=StatusUsersResponse)
 async def create_user(user: UserCreate, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
@@ -46,36 +63,45 @@ async def create_user(user: UserCreate,
         db.rollback() 
         raise e
 
-    return db_user
+    return StatusUsersResponse(
+        status='created',
+        users=db_user
+    )
 
-@router.put("/users/update/{user_id}", response_model=UserRead)
+@router.put("/users/update/{user_id}", response_model=StatusUsersResponse)
 async def update_user(user_id: int, 
                       user: UserCreate,
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
-                      ) -> UserRead:
-    user = db.query(User).filter(User.id == user_id).first()
+                      ) -> Dict:
+    db_user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    user.username = user.username
-    user.password = user.password
-    user.role = user.role
+    db_user.username = user.username
+    db_user.password = user.password
+    db_user.role = user.role
     
     db.commit()
-    db.refresh(user)
+    db.refresh(db_user)
 
-    return user
+    return StatusUsersResponse(
+            status="changed",
+            users=db_user
+    )
 
-@router.delete("/users/delete/{user_id}", response_model=List[UserRead])
+@router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse)
 async def delete_user(user_id: int, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
                       ) -> List[UserRead]:
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    db_user = db.query(User).filter(User.id == user_id).first()
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    db.delete(user)
+    db.delete(db_user)
     db.commit()
-    return db.query(User).all()
+    return StatusUsersResponse(
+            status="deleted",
+            users=db_user
+        )
