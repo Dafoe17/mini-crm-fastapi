@@ -32,17 +32,6 @@ def get_current_user(
     return user
 
 
-def require_role(role: str):
-    def role_checker(current_user: User = Depends(get_current_user)):
-        if current_user.role != role:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Access denied. Required role: {role}"
-            )
-        return current_user
-    return role_checker
-
-
 def require_roles(*allowed_roles: str):
     def roles_checker(current_user: User = Depends(get_current_user)):
         if current_user.role not in allowed_roles:
