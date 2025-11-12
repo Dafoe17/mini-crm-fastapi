@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field, StringConstraints, EmailStr, 
 from datetime import datetime
 from typing import Optional, Annotated
 from src.enums import DealStatus, TaskStatus, UserRole
+from src.core.security import hash_password
 import re
 
 PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?[()\d\s-]{7,20}$")]
@@ -39,11 +40,11 @@ class UserCreate(UserBase):
             raise ValueError("Password must contain at least one number")
         if not re.search(PASSWORD_REGEX["special"], value):
             raise ValueError("Password must contain at least one special symbols (!.,_)")
-        return value
+        return hash_password(value)
 
-class UserUpdate(UserBase):
+class UserUpdate(UserCreate):
     model_config = ConfigDict(partial=True)
-    password: Optional[str] = Field(default=None, max_length=50, min_length=6, strip_whitespace=True)
+    
 
 # --Clients--
 
