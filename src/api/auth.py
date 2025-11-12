@@ -7,8 +7,8 @@ from src.core.security import verify_password, create_access_token
 router = APIRouter(tags=["Auth"])
 
 @router.post("/auth/login")
-async def login(username: str = Form(...),
-                password: str = Form(...),
+async def login(username: str = Form(),
+                password: str = Form(),
                 db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
     if user is None or not verify_password(password, user.password):
