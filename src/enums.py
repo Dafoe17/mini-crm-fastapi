@@ -11,6 +11,6 @@ class TaskStatus(str, Enum):
     done = "done"
 
 class UserRole(str, Enum):
-    admin = "admin"
-    manager = "manager"
     user = "user"
+    manager = "manager"
+    admin = "admin"
