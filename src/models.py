@@ -13,7 +13,7 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    username = Column(String, nullable=False, index=True)
+    username = Column(String, nullable=False, unique=True, index=True)
     password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default="user")
     role_level = Column(Integer, default=0, nullable=False, index=True)
@@ -26,8 +26,8 @@ class Client(Base):
     __tablename__ = 'clients'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"),  ondelete="SET NULL", index=True)
-    name = Column(String, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    name = Column(String, nullable=False, unique=True, index=True)
     email = Column(String, nullable=False, index=True)
     phone = Column(String, nullable=False, index=True)
     notes = Column(String, nullable=True)
@@ -36,8 +36,8 @@ class Deal(Base):
     __tablename__ = 'deals'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    client_id = Column(Integer, ForeignKey("clients.id"), ondelete="CASCADE", nullable=False, index=True)
-    title = Column(String, nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False, unique=True, index=True)
     status = Column(Enum(DealStatus), nullable=False, index=True)
     value = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, index=True)
@@ -47,8 +47,8 @@ class Task(Base):
     __tablename__ = 'tasks'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    deal_id = Column(Integer, ForeignKey("deals.id"), ondelete="CASCADE", nullable=False, index=True)
-    title = Column(String, nullable=False, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String, nullable=False, unique=True, index=True)
     description = Column(String, nullable=True)
     status = Column(Enum(TaskStatus), nullable=False, index=True)
     due_date = Column(DateTime, index=True)
