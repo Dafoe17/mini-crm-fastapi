@@ -13,7 +13,6 @@ PASSWORD_REGEX = {
 class UserBase(BaseModel):
     username: str = Field(max_length=50, min_length=2, strip_whitespace=True)
     role: UserRole
-    role_level: int
     
 class UserRead(UserBase):
     id: int = Field(gt=0)
@@ -41,7 +40,7 @@ class UserUpdate(UserCreate):
 
 class StatusUsersResponse(BaseModel):
     status: ActionStatus
-    users: Union[List[UserRead], UserRead]
+    users: Optional[Union[List[UserRead], UserRead]] = None
     details: Optional[str] = None
 
 class UsersListResponse(BaseModel):
