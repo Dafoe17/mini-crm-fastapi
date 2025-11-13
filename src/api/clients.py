@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends, Path
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
 from src.enums import SortOrder
@@ -91,7 +91,7 @@ async def get_unassigned_clients(db: Session = Depends(get_db),
                     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
                     ) -> ClientsListResponse:
     
-    query = db.query(Client)
+    query = db.query(Client).filter(Client.user_id == None)
     
     if search:
         query = query.filter(
@@ -136,7 +136,7 @@ async def take_unassigned_clients(db: Session = Depends(get_db),
         db.commit()
         db.refresh(db_client)
         response = StatusClientsResponse(
-            status="change"
+            status="changed"
         )
     except Exception as e:
         db.rollback()
@@ -154,7 +154,7 @@ async def delegete_unassigned_clients(db: Session = Depends(get_db),
                     _: User = Depends(require_roles('admin', 'manager')),
                     username: str = Query('User', description="Search user by name"),
                     client_id: int | None = Query(None, description="Search client by id"),
-                    name: str = Query('Client', description="Search client by name"),
+                    name: str = Query("", description="Search client by name"),
                     ) -> StatusClientsResponse:
     
     if client_id:
@@ -173,7 +173,7 @@ async def delegete_unassigned_clients(db: Session = Depends(get_db),
         db.commit()
         db.refresh(db_client)
         response = StatusClientsResponse(
-            status="change"
+            status="changed"
         )
     except Exception as e:
         db.rollback()
@@ -191,12 +191,15 @@ async def create_client(client: ClientCreate,
                         db: Session = Depends(get_db),
                         current_user: User = Depends(require_roles('admin', 'manager')),
                         ) -> StatusClientsResponse:
+    query = db.query(Client).filter(Client.name == client.name).first()
+    if query:
+        raise HTTPException(status_code=404, detail="Client already exists")
     
     if current_user.role == 'manager':
         user_id = current_user.id
 
     else:
-        assigned_user = db.query(User).filter(User.username == client.user_username).first()
+        assigned_user = db.query(User).filter(User.username == client.user_name).first()
         if not assigned_user:
             raise HTTPException(status_code=404, detail="User not found")
         user_id = assigned_user.id
@@ -211,14 +214,14 @@ async def create_client(client: ClientCreate,
         db.commit()
         db.refresh(db_client)
         response = StatusClientsResponse(
-            status="create",
+            status="created",
         )
 
     except Exception as e:
         db.rollback() 
         response = StatusClientsResponse(
             status="error",
-            detail=f"Failed to create user: {str(e)}"
+            details=f"Failed to create user: {str(e)}"
         )
     
     response.clients = ClientRead.model_validate(db_client)
@@ -230,7 +233,7 @@ async def update_client(client: ClientCreate,
                         db: Session = Depends(get_db),
                         current_user: User = Depends(require_roles('admin', 'manager')),
                         client_id: int | None = Query(None, description="Search by id"),
-                        name: str = Query('Client', description="Search by name"),
+                        name: str = Query("", description="Search by name"),
                         ) -> StatusClientsResponse:
     
     if client_id:
@@ -241,7 +244,7 @@ async def update_client(client: ClientCreate,
     if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")
     
-    assigned_user = db.query(User).filter(User.username == client.user_username).first()
+    assigned_user = db.query(User).filter(User.username == client.user_name).first()
     if not assigned_user:
             raise HTTPException(status_code=404, detail="User not found")
     
@@ -252,28 +255,24 @@ async def update_client(client: ClientCreate,
                 detail=f""""Access denied. 
                 Your role able to update only clients related to your user"""
             )
-
-    user_id = assigned_user.id
     
-    db_client = Client(
-        user_id=user_id,
-        name=client.name,
-        email=client.email,
-        phone=client.phone,
-        notes=client.notes
-    )
+    db_client.user_id = assigned_user.id
+    db_client.name = client.name
+    db_client.email = client.email
+    db_client.phone = client.phone
+    db_client.notes = client.notes
 
     try:
         db.commit()
         db.refresh(db_client)
         response = StatusClientsResponse(
-            status="change"
+            status="changed"
         )
     except Exception as e:
         db.rollback()
         response = StatusClientsResponse(
             status="error",
-            detail=f"Failed to change client: {str(e)}"
+            details=f"Failed to change client: {str(e)}"
         )
 
     response.clients = ClientRead.model_validate(db_client)
@@ -281,16 +280,12 @@ async def update_client(client: ClientCreate,
     return response
 
 @router.delete("/clients/delete/{client_id}", response_model=StatusClientsResponse, operation_id="delete-client")
-async def delete_client(db: Session = Depends(get_db),
+async def delete_client(name: str = Query("", description="Delete by name"),
+                        db: Session = Depends(get_db),
                         _: User = Depends(require_roles('admin')),
-                        client_id: int | None = Query(None, description="Delete by id"),
-                        name: str = Query('', description="Delete by name")
                         ) -> StatusClientsResponse:
 
-    if client_id:
-        db_client = db.query(Client).filter(Client.id == client_id).first()
-    else:
-        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+    db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
 
     if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")
@@ -299,13 +294,13 @@ async def delete_client(db: Session = Depends(get_db),
         db.delete(db_client)
         db.commit()
         response = StatusClientsResponse(
-            status="delete",
+            status="deleted",
         )
     except Exception as e:
         db.rollback()
         response = StatusClientsResponse(
             status="error",
-            detail=f"Failed to delete client: {str(e)}"
+            details=f"Failed to delete client: {str(e)}"
         )
 
     response.clients = ClientRead.model_validate(db_client)
