@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List, Dict
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
+from src.enums import SortOrder
 from src.models import User
 from src.schemas.user import UserCreate, UserRead, UsersListResponse, StatusUsersResponse, UserRole
 
@@ -15,26 +16,30 @@ async def get_my_info(current_user: User = Depends(get_current_user)) -> UserRea
 async def get_users(db: Session = Depends(get_db), 
                     _: User = Depends(require_roles('admin', 'manager')),
                     skip: int = Query(None, description="Number of users to skip"),
-                    limit: int = Query(None, description="Number of users to return")
-                    ) -> Dict:
-    total_users = db.query(User).count()
-    users = db.query(User).offset(skip).limit(limit).all()
-    return UsersListResponse(
-        total=total_users,
-        skip=skip,
-        limit=limit,
-        users=[UserRead.model_validate(user) for user in users]
-    )
+                    limit: int = Query(None, description="Number of users to return"),
+                    role: UserRole | None = Query(None, description="Filter by role"),
+                    search: str | None = Query(None, description="Search by username"),
+                    sort_by: str = Query("id", description="Sort by field: id, username, role"),
+                    order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                    ) -> UsersListResponse:
+    query = db.query(User)
+    
+    if role:
+        query = query.filter(User.role == role)
+    if search:
+        query = query.filter(User.username.ilike(f"%{search}%"))
+    
+    sort_by = "role_level" if sort_by == "role" else sort_by
+    
+    if hasattr(User, sort_by):
+        sort_attr = getattr(User, sort_by)
+        query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
 
-@router.get("/users/get/by_role/{user_role}", response_model=UsersListResponse, operation_id="get-users-by-role")
-async def get_users_by_role(user_role: UserRole, 
-                            db: Session = Depends(get_db),
-                            _: User = Depends(require_roles('admin', 'manager')),
-                            skip: int = Query(None, description="Number of users to skip"),
-                            limit: int = Query(None, description="Number of users to return")
-                            ) -> List[UserRead]:
-    total_users = db.query(User).filter(User.role == user_role).count()
-    users = db.query(User).filter(User.role == user_role).offset(skip).limit(limit).all()
+    total_users = query.count()
+    users = query.offset(skip).limit(limit).all()
+
     return UsersListResponse(
         total=total_users,
         skip=skip,
