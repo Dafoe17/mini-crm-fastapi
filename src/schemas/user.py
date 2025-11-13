@@ -13,7 +13,8 @@ PASSWORD_REGEX = {
 class UserBase(BaseModel):
     username: str = Field(max_length=50, min_length=2, strip_whitespace=True)
     role: UserRole
-
+    role_level: int
+    
 class UserRead(UserBase):
     id: int = Field(gt=0)
     

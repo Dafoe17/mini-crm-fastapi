@@ -3,6 +3,11 @@ from sqlalchemy.orm import relationship
 from src.database import Base
 from src.enums import DealStatus, TaskStatus, UserRole
 
+role_priority_map = {
+    UserRole.user: 1,
+    UserRole.manager: 2,
+    UserRole.admin: 3,
+}
 
 class User(Base):
     __tablename__ = 'users'
@@ -11,6 +16,11 @@ class User(Base):
     username = Column(String, nullable=False, index=True)
     password = Column(String, nullable=False)
     role = Column(Enum(UserRole), default="user")
+    role_level = Column(Integer, default=0, nullable=False, index=True)
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.role_level = role_priority_map.get(self.role, 0)  
     
 class Client(Base):
     __tablename__ = 'clients'
