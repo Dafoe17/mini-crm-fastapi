@@ -105,15 +105,20 @@ async def create_client(client: ClientCreate,
         db.add(db_client)
         db.commit()
         db.refresh(db_client)
+        response = StatusClientsResponse(
+            status="create",
+        )
 
     except Exception as e:
         db.rollback() 
-        raise e 
+        response = StatusClientsResponse(
+            status="error",
+            detail=f"Failed to create user: {str(e)}"
+        )
     
-    return StatusClientsResponse(
-        status='created',
-        clients=ClientRead.model_validate(db_client)
-    )
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response
 
 @router.put("/clients/update", response_model=StatusClientsResponse, operation_id="update-client")
 async def update_client(client: ClientCreate,
@@ -156,21 +161,25 @@ async def update_client(client: ClientCreate,
     try:
         db.commit()
         db.refresh(db_client)
-
+        response = StatusClientsResponse(
+            status="change"
+        )
     except Exception as e:
-        db.rollback() 
-        raise e 
-    
-    return StatusClientsResponse(
-        status='changed',
-        clients=ClientRead.model_validate(db_client)
-    )
+        db.rollback()
+        response = StatusClientsResponse(
+            status="error",
+            detail=f"Failed to change client: {str(e)}"
+        )
+
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response
 
 @router.delete("/clients/delete/{client_id}", response_model=StatusClientsResponse, operation_id="delete-client")
 async def delete_client(db: Session = Depends(get_db),
                         _: User = Depends(require_roles('admin')),
                         client_id: int | None = Query(None, description="Delete by id"),
-                        name: str = Query('Client', description="Delete by name")
+                        name: str = Query('', description="Delete by name")
                         ) -> StatusClientsResponse:
 
     if client_id:
@@ -184,5 +193,16 @@ async def delete_client(db: Session = Depends(get_db),
     try:
         db.delete(db_client)
         db.commit()
-    except:
-        return db.query(Client).all()
+        response = StatusClientsResponse(
+            status="delete",
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusClientsResponse(
+            status="error",
+            detail=f"Failed to delete client: {str(e)}"
+        )
+
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response

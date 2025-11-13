@@ -63,10 +63,20 @@ async def create_user(user: UserCreate,
         db.add(db_user)
         db.commit()
         db.refresh(db_user)
+        response = StatusUsersResponse(
+            status="create",
+        )
     
     except Exception as e:
         db.rollback() 
-        raise e
+        response = StatusUsersResponse(
+            status="error",
+            detail=f"Failed to create user: {str(e)}"
+        )
+
+    response.users = UserRead.model_validate(db_user)
+
+    return response
 
     return StatusUsersResponse(
         status='created',
@@ -88,19 +98,24 @@ async def update_user(user_id: int,
         password = user.password,
         role = user.role
     )
-    
+
     try:
         db.commit()
         db.refresh(db_user)
-
+        response = StatusUsersResponse(
+            status="change",
+        )
+    
     except Exception as e:
         db.rollback() 
-        raise e
-    
-    return StatusUsersResponse(
-            status="changed",
-            users=UserRead.model_validate(db_user)
-    )
+        response = StatusUsersResponse(
+            status="error",
+            detail=f"Failed to change user: {str(e)}"
+        )
+
+    response.users = UserRead.model_validate(db_user)
+
+    return response
 
 @router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse, operation_id="delete-user")
 async def delete_user(user_id: int, 
@@ -114,12 +129,17 @@ async def delete_user(user_id: int,
     try:
         db.delete(db_user)
         db.commit()
+        response = StatusUsersResponse(
+            status="delete",
+        )
     
     except Exception as e:
         db.rollback() 
-        raise e
-
-    return StatusUsersResponse(
-            status="deleted",
-            users=UserRead.model_validate(db_user)
+        response = StatusUsersResponse(
+            status="error",
+            detail=f"Failed to delete user: {str(e)}"
         )
+
+    response.users = UserRead.model_validate(db_user)
+
+    return response

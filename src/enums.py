@@ -19,6 +19,7 @@ class ActionStatus(str, Enum):
     created = "created"
     changed = "changed"
     deleted = "deleted"
+    error = "error"
 
 class SortOrder(str, Enum):
     asc = "asc"

@@ -24,6 +24,7 @@ class ClientUpdate(ClientBase):
 class StatusClientsResponse(BaseModel):
     status: ActionStatus
     clients: Union[List[ClientRead], ClientRead]
+    details: Optional[str] = None
 
 class ClientsListResponse(BaseModel):
     total: int = Field(ge=0)

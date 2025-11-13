@@ -42,6 +42,7 @@ class UserUpdate(UserCreate):
 class StatusUsersResponse(BaseModel):
     status: ActionStatus
     users: Union[List[UserRead], UserRead]
+    details: Optional[str] = None
 
 class UsersListResponse(BaseModel):
     total: int = Field(ge=0)
