@@ -1,42 +1,66 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List
-from src.api.dependencies import Session, get_db 
+from src.api.dependencies import Session, get_db, require_roles
 
-from src.models import Client, Deal
-from src.schemas.deal import DealRead, DealCreate
+from src.enums import SortOrder
+from src.models import User, Client, Deal
+from src.schemas.deal import DealRead, DealCreate, DealsListResponse, StatusDealsResponse
 
 router = APIRouter(tags=['Deals'])
 
-@router.get("/deals/get", response_model=List[DealRead], operation_id="get-deals")
-async def get_deals(db: Session = Depends(get_db)) -> List[DealRead]:
-    return db.query(Deal).all()
-
-@router.post("/deals/add", response_model=DealRead, operation_id="add-deals")
-async def create_client(deal: DealCreate, db: Session = Depends(get_db)) -> DealRead:
-    db_client = db.query(Client).filter(Client.id == deal.client_id).first()
-    if db_client is None:
-        raise HTTPException(status_code=404, detail='Client not found')
+@router.get("/deals/get-all", response_model=DealsListResponse, operation_id="get-all-deals")
+async def get_all_deals(db: Session = Depends(get_db), 
+                          current_user: User = Depends(require_roles('admin', 'manager')),
+                          skip: int = Query(None, description="Number of deals to skip"),
+                          limit: int = Query(None, description="Number of deals to return"),
+                          search: str | None = Query(None, description="Search by title"),
+                          bigger_than: int = Query(None, description="Filter deals with value bigger than arg"),
+                          less_than: int = Query(None, description="Filter deals with value less than arg"),
+                          related_to_curr_user: bool = Query(False, description="Filter deals related to to your user"),
+                          related_to_user: str | None = Query(None, description="Filter deals related to user"),
+                          related_to_client: str | None = Query(None, description="Filter deals related to clients"),
+                          sort_by: str = Query("id", description="Sort by field: id, title, status, value"),
+                          order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                          ) -> DealsListResponse:
     
-    db_deal = Deal(client_id=deal.client_id, 
-                   title=deal.title, 
-                   status=deal.status, 
-                   value=deal.value, 
-                   created_at=deal.created_at, 
-                   closed_at=deal.closed_at)
-    try:
-        db.add(db_deal)
-        db.commit()
-        db.refresh(db_deal)
-    except:
-        db.rollback() 
-    return db_deal
+    query = db.query(Deal)
 
-@router.delete("/users/delete/{deal_id}", response_model=List[DealRead], operation_id="delete-deals")
-async def delete_deal(deal_id: int, db: Session = Depends(get_db)) -> List[DealRead]:
-    deal = db.query(Deal).filter(Deal.id == deal_id).first()
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
+    if related_to_client:
+        client_ids = db.query(Client.id).filter(Client.name.islike(f"%{related_to_client}%")).subquery()
+        query = query.filter(Deal.client_id.in_(client_ids))
+
+    if related_to_user:
+        user_ids = db.query(User.id).filter(User.username.islike(f"%{related_to_user}%")).subquery
+        client_ids = db.query(Client.id).filter(Client.user_id.in_(user_ids))
+        query = query.filter(Deal.client_id.in_(client_ids))
+
+    if related_to_curr_user:
+        user_ids = db.query(User.id).filter(User.username.islike(f"%{current_user.username}%")).subquery
+        client_ids = db.query(Client.id).filter(Client.user_id.in_(user_ids))
+        query = query.filter(Deal.client_id.in_(client_ids))
+
+    if search:
+        query = query.filter(Deal.title.ilike(f"%{search}%"))
+
+    if bigger_than:
+        query = db.query(Deal).filter(Deal.value >= bigger_than)
     
-    db.delete(deal)
-    db.commit()
-    return db.query(Deal).all()
+    if less_than:
+        query = db.query(Deal).filter(Deal.value <= less_than)
+
+    if hasattr(Deal, sort_by):
+        sort_attr = getattr(Deal, sort_by)
+        query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
+
+    total_deals = query.count()
+    deals = query.offset(skip).limit(limit).all()
+
+    return DealsListResponse(
+        total=total_deals,
+        skip=skip,
+        limit=limit,
+        clients=[Deal.model_validate(deal) for deal in deals]
+    )
+
