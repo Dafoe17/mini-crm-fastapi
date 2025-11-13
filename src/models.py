@@ -26,7 +26,7 @@ class Client(Base):
     __tablename__ = 'clients'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"),  ondelete="SET NULL", index=True)
     name = Column(String, nullable=False, index=True)
     email = Column(String, nullable=False, index=True)
     phone = Column(String, nullable=False, index=True)
@@ -36,7 +36,7 @@ class Deal(Base):
     __tablename__ = 'deals'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    client_id = Column(Integer, ForeignKey("clients.id"), nullable=False, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id"), ondelete="CASCADE", nullable=False, index=True)
     title = Column(String, nullable=False, index=True)
     status = Column(Enum(DealStatus), nullable=False, index=True)
     value = Column(Integer, nullable=False)
@@ -47,7 +47,7 @@ class Task(Base):
     __tablename__ = 'tasks'
 
     id = Column(Integer, primary_key=True, autoincrement=True, index=True)
-    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id"), ondelete="CASCADE", nullable=False, index=True)
     title = Column(String, nullable=False, index=True)
     description = Column(String, nullable=True)
     status = Column(Enum(TaskStatus), nullable=False, index=True)
