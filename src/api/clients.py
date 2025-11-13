@@ -1,17 +1,52 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import List
-from src.api.dependencies import Session, get_db 
+from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
+from src.enums import SortOrder
 from src.models import User, Client
-from src.schemas.client import ClientRead, ClientCreate
+from src.schemas.client import ClientRead, ClientCreate, ClientsListResponse, StatusClientsResponse
 
 
 router = APIRouter(tags=['Clients'])
 
+@router.get("/clients/get", response_model=ClientsListResponse, operation_id="get-all-clients")
+async def get_all_clients(db: Session = Depends(get_db), 
+                    _: User = Depends(require_roles('admin', 'manager')),
+                    skip: int = Query(None, description="Number of users to skip"),
+                    limit: int = Query(None, description="Number of users to return"),
+                    search: str | None = Query(None, description="Search by name, email or phone"),
+                    related_to_user: str | None = Query(None, description="Filter clients related to user"),
+                    sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
+                    order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                    ) -> ClientsListResponse:
+    
+    query = db.query(Client)
 
-@router.get("/clients/get", response_model=List[ClientRead], operation_id="get-clients")
-async def get_clients(db: Session = Depends(get_db)) -> List[ClientRead]:
-    return db.query(Client).all()
+    if related_to_user:
+        user_ids = db.query(User.id).filter(User.username.ilike(f"%{related_to_user}%")).subquery()
+        query = query.filter(Client.user_id.in_(user_ids))
+    
+    if search:
+        query = query.filter(
+        (Client.name.ilike(f"%{search}%")) |
+        (Client.email.ilike(f"%{search}%")) |
+        (Client.phone.ilike(f"%{search}%")))
+
+    if hasattr(Client, sort_by):
+        sort_attr = getattr(User, sort_by)
+        query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
+
+    total_clients = query.count()
+    clients = query.offset(skip).limit(limit).all()
+
+    return ClientsListResponse(
+        total=total_clients,
+        skip=skip,
+        limit=limit,
+        clients=[ClientRead.model_validate(client) for client in clients]
+    )
 
 @router.post("/clients/add", response_model=ClientRead, operation_id="add-clients")
 async def create_client(client: ClientCreate, db: Session = Depends(get_db)) -> ClientRead:
