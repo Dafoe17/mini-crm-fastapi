@@ -81,19 +81,26 @@ async def update_user(user_id: int,
                       _: User = Depends(require_roles('admin'))
                       ) -> StatusUsersResponse:
     db_user = db.query(User).filter(User.id == user_id).first()
-    if not user:
+    if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    db_user.username = user.username
-    db_user.password = user.password
-    db_user.role = user.role
+    db_user = User(
+        username = user.username,
+        password = user.password,
+        role = user.role
+    )
     
-    db.commit()
-    db.refresh(db_user)
+    try:
+        db.commit()
+        db.refresh(db_user)
 
+    except Exception as e:
+        db.rollback() 
+        raise e
+    
     return StatusUsersResponse(
             status="changed",
-            users=db_user
+            users=UserRead.model_validate(db_user)
     )
 
 @router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse, operation_id="delete-user")
@@ -105,9 +112,15 @@ async def delete_user(user_id: int,
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    db.delete(db_user)
-    db.commit()
+    try:
+        db.delete(db_user)
+        db.commit()
+    
+    except Exception as e:
+        db.rollback() 
+        raise e
+
     return StatusUsersResponse(
             status="deleted",
-            users=db_user
+            users=UserRead.model_validate(db_user)
         )
