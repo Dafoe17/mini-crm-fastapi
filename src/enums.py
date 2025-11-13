@@ -19,3 +19,7 @@ class UserStatus(str, Enum):
     created = "created"
     changed = "changed"
     deleted = "deleted"
+
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
