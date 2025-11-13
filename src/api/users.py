@@ -52,7 +52,7 @@ async def get_users(db: Session = Depends(get_db),
 async def create_user(user: UserCreate, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
-                      ) -> UserRead:
+                      ) -> StatusUsersResponse:
     user = db.query(User).filter(User.name == user.username).first()
     if user:
         raise HTTPException(status_code=404, detail="User already exists")
@@ -100,7 +100,7 @@ async def update_user(user_id: int,
 async def delete_user(user_id: int, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
-                      ) -> List[UserRead]:
+                      ) -> StatusUsersResponse:
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
