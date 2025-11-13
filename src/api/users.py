@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
+from typing import Optional
 
 from src.enums import SortOrder
 from src.models import User
@@ -12,8 +13,8 @@ router = APIRouter(tags=['Users'])
 async def get_my_info(current_user: User = Depends(get_current_user)) -> UserRead:
     return current_user
 
-@router.get("/users/get", response_model=UsersListResponse, operation_id="get-all-users")
-async def get_users(db: Session = Depends(get_db), 
+@router.get("/users/get-all-users", response_model=UsersListResponse, operation_id="get-all-users")
+async def get_all_users(db: Session = Depends(get_db), 
                     _: User = Depends(require_roles('admin', 'manager')),
                     skip: int = Query(None, description="Number of users to skip"),
                     limit: int = Query(None, description="Number of users to return"),
@@ -47,13 +48,30 @@ async def get_users(db: Session = Depends(get_db),
         users=[UserRead.model_validate(user) for user in users]
     )
 
+@router.get("/users/get-user-by-id", response_model=UsersListResponse, operation_id="get-user-by-id")
+async def get_user_by_id(db: Session = Depends(get_db), 
+                    _: User = Depends(require_roles('admin', 'manager')),
+                    user_id = int,
+                    ) -> UsersListResponse:
+
+    db_user = db.query(User).filter(User.id == user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return UsersListResponse(
+        total=1,
+        skip=None,
+        limit=None,
+        users=UserRead.model_validate(db_user)
+    )
+
 @router.post("/users/add", response_model=StatusUsersResponse, operation_id="add-user")
 async def create_user(user: UserCreate, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
                       ) -> StatusUsersResponse:
-    user = db.query(User).filter(User.name == user.username).first()
-    if user:
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
         raise HTTPException(status_code=404, detail="User already exists")
 
     db_user = User(username=user.username, 
@@ -71,46 +89,41 @@ async def create_user(user: UserCreate,
         db.rollback() 
         response = StatusUsersResponse(
             status="error",
-            detail=f"Failed to create user: {str(e)}"
+            details=f"Failed to create user: {str(e)}"
         )
 
     response.users = UserRead.model_validate(db_user)
 
     return response
 
-    return StatusUsersResponse(
-        status='created',
-        users=db_user
-    )
-
 @router.put("/users/update/{user_id}", response_model=StatusUsersResponse, operation_id="update-user")
-async def update_user(user_id: int, 
-                      user: UserCreate,
+async def update_user(user: UserCreate,
                       db: Session = Depends(get_db),
-                      _: User = Depends(require_roles('admin'))
+                      _: User = Depends(require_roles('admin')),
+                      name: str = Query(description="Search by user name")
                       ) -> StatusUsersResponse:
-    db_user = db.query(User).filter(User.id == user_id).first()
+    
+    db_user = db.query(User).filter(User.username == name).first()
+
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    db_user = User(
-        username = user.username,
-        password = user.password,
-        role = user.role
-    )
+    db_user.username = user.username
+    db_user.password = user.password
+    db_user.role = user.role
 
     try:
         db.commit()
         db.refresh(db_user)
         response = StatusUsersResponse(
-            status="change",
+            status="changed",
         )
     
     except Exception as e:
         db.rollback() 
         response = StatusUsersResponse(
             status="error",
-            detail=f"Failed to change user: {str(e)}"
+            details=f"Failed to change user: {str(e)}"
         )
 
     response.users = UserRead.model_validate(db_user)
@@ -118,11 +131,15 @@ async def update_user(user_id: int,
     return response
 
 @router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse, operation_id="delete-user")
-async def delete_user(user_id: int, 
+async def delete_user(name: str = Query(description="Search by user name"), 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
                       ) -> StatusUsersResponse:
-    db_user = db.query(User).filter(User.id == user_id).first()
+    if not name:
+        raise HTTPException(status_code=400, detail="No search criteria provided")
+    
+    db_user = db.query(User).filter(User.username == name).first()
+
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -130,14 +147,14 @@ async def delete_user(user_id: int,
         db.delete(db_user)
         db.commit()
         response = StatusUsersResponse(
-            status="delete",
+            status="deleted",
         )
     
     except Exception as e:
         db.rollback() 
         response = StatusUsersResponse(
             status="error",
-            detail=f"Failed to delete user: {str(e)}"
+            details=f"Failed to delete user: {str(e)}"
         )
 
     response.users = UserRead.model_validate(db_user)
