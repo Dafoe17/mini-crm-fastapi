@@ -1,10 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List, Dict
+from typing import List
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
 from src.enums import SortOrder
 from src.models import User
 from src.schemas.user import UserCreate, UserRead, UsersListResponse, StatusUsersResponse, UserRole
+
 
 router = APIRouter(tags=['Users'])
 
@@ -30,7 +31,7 @@ async def get_users(db: Session = Depends(get_db),
         query = query.filter(User.username.ilike(f"%{search}%"))
     
     sort_by = "role_level" if sort_by == "role" else sort_by
-    
+
     if hasattr(User, sort_by):
         sort_attr = getattr(User, sort_by)
         query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
@@ -78,7 +79,7 @@ async def update_user(user_id: int,
                       user: UserCreate,
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
-                      ) -> Dict:
+                      ) -> StatusUsersResponse:
     db_user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
