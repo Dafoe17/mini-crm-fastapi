@@ -9,11 +9,11 @@ from src.schemas.client import ClientRead, ClientCreate
 router = APIRouter(tags=['Clients'])
 
 
-@router.get("/clients/get", response_model=List[ClientRead])
+@router.get("/clients/get", response_model=List[ClientRead], operation_id="get-clients")
 async def get_clients(db: Session = Depends(get_db)) -> List[ClientRead]:
     return db.query(Client).all()
 
-@router.post("/clients/add", response_model=ClientRead)
+@router.post("/clients/add", response_model=ClientRead, operation_id="add-clients")
 async def create_client(client: ClientCreate, db: Session = Depends(get_db)) -> ClientRead:
     db_user = db.query(User).filter(User.id == client.user_id).first()
     if db_user is None:
@@ -32,7 +32,7 @@ async def create_client(client: ClientCreate, db: Session = Depends(get_db)) -> 
         db.rollback() 
     return db_client
 
-@router.delete("/clients/delete/{client_id}", response_model=List[ClientRead])
+@router.delete("/clients/delete/{client_id}", response_model=List[ClientRead], operation_id="delete-clients")
 async def delete_client(client_id: int, db: Session = Depends(get_db)) -> List[ClientRead]:
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client:

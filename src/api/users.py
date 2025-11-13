@@ -7,11 +7,11 @@ from src.schemas.user import UserCreate, UserRead, UsersListResponse, StatusUser
 
 router = APIRouter(tags=['Users'])
 
-@router.get("/users/me", response_model=UserRead)
+@router.get("/users/me", response_model=UserRead, operation_id="my-info")
 async def get_my_info(current_user: User = Depends(get_current_user)) -> UserRead:
     return current_user
 
-@router.get("/users/get", response_model=UsersListResponse)
+@router.get("/users/get", response_model=UsersListResponse, operation_id="get-all-users")
 async def get_users(db: Session = Depends(get_db), 
                     _: User = Depends(require_roles('admin', 'manager')),
                     skip: int = Query(None, description="Number of users to skip"),
@@ -26,7 +26,7 @@ async def get_users(db: Session = Depends(get_db),
         users=[UserRead.model_validate(user) for user in users]
     )
 
-@router.get("/users/get/role/{user_role}", response_model=UsersListResponse)
+@router.get("/users/get/by_role/{user_role}", response_model=UsersListResponse, operation_id="get-users-by-role")
 async def get_users_by_role(user_role: UserRole, 
                             db: Session = Depends(get_db),
                             _: User = Depends(require_roles('admin', 'manager')),
@@ -42,7 +42,7 @@ async def get_users_by_role(user_role: UserRole,
         users=[UserRead.model_validate(user) for user in users]
     )
 
-@router.post("/users/add", response_model=StatusUsersResponse)
+@router.post("/users/add", response_model=StatusUsersResponse, operation_id="add-user")
 async def create_user(user: UserCreate, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
@@ -68,7 +68,7 @@ async def create_user(user: UserCreate,
         users=db_user
     )
 
-@router.put("/users/update/{user_id}", response_model=StatusUsersResponse)
+@router.put("/users/update/{user_id}", response_model=StatusUsersResponse, operation_id="update-user")
 async def update_user(user_id: int, 
                       user: UserCreate,
                       db: Session = Depends(get_db),
@@ -90,7 +90,7 @@ async def update_user(user_id: int,
             users=db_user
     )
 
-@router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse)
+@router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse, operation_id="delete-user")
 async def delete_user(user_id: int, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))

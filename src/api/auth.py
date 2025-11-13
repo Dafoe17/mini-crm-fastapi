@@ -6,7 +6,7 @@ from src.core.security import verify_password, create_access_token
 
 router = APIRouter(tags=["Auth"])
 
-@router.post("/auth/login")
+@router.post("/auth/login", operation_id="login")
 async def login(username: str = Form(),
                 password: str = Form(),
                 db: Session = Depends(get_db)):
@@ -20,7 +20,7 @@ async def login(username: str = Form(),
 
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.patch("/auth/change-password")
+@router.patch("/auth/change-password", operation_id="change-password")
 async def change_password(username: str,
                           password: str,
                           new_password: str,

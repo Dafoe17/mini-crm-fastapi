@@ -7,11 +7,11 @@ from src.schemas.deal import DealRead, DealCreate
 
 router = APIRouter(tags=['Deals'])
 
-@router.get("/deals/get", response_model=List[DealRead])
+@router.get("/deals/get", response_model=List[DealRead], operation_id="get-deals")
 async def get_deals(db: Session = Depends(get_db)) -> List[DealRead]:
     return db.query(Deal).all()
 
-@router.post("/deals/add", response_model=DealRead)
+@router.post("/deals/add", response_model=DealRead, operation_id="add-deals")
 async def create_client(deal: DealCreate, db: Session = Depends(get_db)) -> DealRead:
     db_client = db.query(Client).filter(Client.id == deal.client_id).first()
     if db_client is None:
@@ -31,7 +31,7 @@ async def create_client(deal: DealCreate, db: Session = Depends(get_db)) -> Deal
         db.rollback() 
     return db_deal
 
-@router.delete("/users/delete/{deal_id}", response_model=List[DealRead])
+@router.delete("/users/delete/{deal_id}", response_model=List[DealRead], operation_id="delete-deals")
 async def delete_deal(deal_id: int, db: Session = Depends(get_db)) -> List[DealRead]:
     deal = db.query(Deal).filter(Deal.id == deal_id).first()
     if not deal:

@@ -7,11 +7,11 @@ from src.schemas.task import TaskRead, TaskCreate
 
 router = APIRouter(tags=['Tasks'])
 
-@router.get("/tasks/get", response_model=List[TaskRead])
+@router.get("/tasks/get", response_model=List[TaskRead], operation_id="get-tasks")
 async def get_tasks(db: Session = Depends(get_db)) -> List[TaskRead]:
     return db.query(Task).all()
 
-@router.post("/tasks/add", response_model=TaskRead)
+@router.post("/tasks/add", response_model=TaskRead, operation_id="post-tasks")
 async def create_task(task: TaskCreate, db: Session = Depends(get_db)) -> TaskRead:
     db_deal = db.query(Deal).filter(Deal.id == task.deal_id).first()
     if db_deal is None:
@@ -30,7 +30,7 @@ async def create_task(task: TaskCreate, db: Session = Depends(get_db)) -> TaskRe
         db.rollback() 
     return db_task
 
-@router.delete("/tasks/delete/{task_id}", response_model=List[TaskRead])
+@router.delete("/tasks/delete/{task_id}", response_model=List[TaskRead], operation_id="delete-tasks")
 async def delete_task(task_id: int, db: Session = Depends(get_db)) -> List[TaskRead]:
     task = db.query(Task).filter(Task.id == task_id).first()
     if not task:
