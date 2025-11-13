@@ -1,5 +1,4 @@
-from src.database import Session_local
-from sqlalchemy.orm import Session
+from src.database import Session, Session_local
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from src.core.security import verify_access_token, JWTValidationError
