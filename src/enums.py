@@ -15,7 +15,7 @@ class UserRole(str, Enum):
     manager = "manager"
     admin = "admin"
 
-class UserStatus(str, Enum):
+class ActionStatus(str, Enum):
     created = "created"
     changed = "changed"
     deleted = "deleted"
