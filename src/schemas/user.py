@@ -11,8 +11,12 @@ PASSWORD_REGEX = {
 }
 
 class UserBase(BaseModel):
-    username: str = Field(max_length=50, min_length=2, strip_whitespace=True)
+    username: str = Field(max_length=50, min_length=2, json_schema_extra={"strip_whitespace": True})
     role: UserRole
+
+    @field_validator("username")
+    def strip_username(cls, v):
+        return v.strip()
     
 class UserRead(UserBase):
     id: int = Field(gt=0)
@@ -20,7 +24,11 @@ class UserRead(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 class UserCreate(UserBase):
-    password: str = Field(strip_whitespace=True)
+    password: str = Field(json_schema_extra={"strip_whitespace": True})
+
+    @field_validator("password")
+    def strip_password(cls, v):
+        return v.strip()
 
     @field_validator('password')
     def password_strength_check(cls, value):
@@ -39,12 +47,12 @@ class UserUpdate(UserCreate):
     model_config = ConfigDict(partial=True)
 
 class StatusUsersResponse(BaseModel):
-    status: ActionStatus
+    status: ActionStatus 
     users: Optional[Union[List[UserRead], UserRead]] = None
     details: Optional[str] = None
 
 class UsersListResponse(BaseModel):
-    total: int = Field(ge=0)
+    total: int = Field(default=0, ge=0)
     skip: Optional[int] = Field(default=None, ge=0)
     limit: Optional[int] = Field(default=None, ge=0)
-    users: Union[List[UserRead], UserRead]
+    users: Optional[Union[List[UserRead], UserRead]] = None

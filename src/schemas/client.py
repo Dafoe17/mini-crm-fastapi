@@ -1,14 +1,19 @@
-from pydantic import BaseModel, ConfigDict, StringConstraints, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, StringConstraints, EmailStr, Field, field_validator
 from typing import Optional, List, Annotated, Union
 from src.enums import ActionStatus
 
 PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?(7|8)\d{10}$")]
 
 class ClientBase(BaseModel):
-    name: str = Field(max_length=50, min_length=2, strip_whitespace=True)
+    name: str = Field(max_length=50, min_length=2, json_schema_extra={"strip_whitespace": True})
     email: EmailStr
     phone: PhoneStr
     notes: Optional[str] = Field(default="")
+
+    @field_validator("name")
+    def strip_name(cls, v):
+        return v.strip()
+    
 
 class ClientRead(ClientBase):
     id: int = Field(gt=0)
@@ -30,4 +35,4 @@ class ClientsListResponse(BaseModel):
     total: int = Field(ge=0)
     skip: Optional[int] = Field(default=None, ge=0)
     limit: Optional[int] = Field(default=None, ge=0)
-    clients: Union[List[ClientRead], ClientRead]
+    clients: Optional[Union[List[ClientRead], ClientRead]] = None
