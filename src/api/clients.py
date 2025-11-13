@@ -81,6 +81,111 @@ async def get_my_clients(db: Session = Depends(get_db),
         clients=[ClientRead.model_validate(client) for client in clients]
     )
 
+@router.get("/clients/get/unassigned_clients", response_model=ClientsListResponse, operation_id="get-unassigned-clients")
+async def get_unassigned_clients(db: Session = Depends(get_db), 
+                    _: User = Depends(get_current_user),
+                    skip: int | None = Query(None, description="Number of users to skip"),
+                    limit: int | None = Query(None, description="Number of users to return"),
+                    search: str | None = Query(None, description="Search by name, email or phone"),
+                    sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
+                    order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                    ) -> ClientsListResponse:
+    
+    query = db.query(Client)
+    
+    if search:
+        query = query.filter(
+        (Client.name.ilike(f"%{search}%")) |
+        (Client.email.ilike(f"%{search}%")) |
+        (Client.phone.ilike(f"%{search}%")))
+
+    if hasattr(Client, sort_by):
+        sort_attr = getattr(Client, sort_by)
+        query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
+
+    total_clients = query.count()
+    clients = query.offset(skip).limit(limit).all()
+
+    return ClientsListResponse(
+        total=total_clients,
+        skip=skip,
+        limit=limit,
+        clients=[ClientRead.model_validate(client) for client in clients]
+    )
+
+@router.patch("/clients/patch/take_client", response_model=StatusClientsResponse, operation_id="take-unassigned-client")
+async def take_unassigned_clients(db: Session = Depends(get_db), 
+                    current_user: User = Depends(get_current_user),
+                    client_id: int | None = Query(None, description="Search client by id"),
+                    name: str = Query('Client', description="Search client by name"),
+                    ) -> StatusClientsResponse:
+    
+    if client_id:
+        db_client = db.query(Client).filter(Client.id == client_id).first()
+    else:
+        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+    
+    if db_client.user_id:
+        raise HTTPException(status_code=400, detail=f"Client {db_client.name} is already assigned.")
+
+    db_client.user_id = current_user.id
+    
+    try:
+        db.commit()
+        db.refresh(db_client)
+        response = StatusClientsResponse(
+            status="change"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusClientsResponse(
+            status="error",
+            details=f"Failed to take client: {str(e)}"
+        )
+
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response
+
+@router.patch("/clients/patch/delegate_client", response_model=StatusClientsResponse, operation_id="delegete-unassigned-client")
+async def delegete_unassigned_clients(db: Session = Depends(get_db), 
+                    _: User = Depends(require_roles('admin', 'manager')),
+                    username: str = Query('User', description="Search user by name"),
+                    client_id: int | None = Query(None, description="Search client by id"),
+                    name: str = Query('Client', description="Search client by name"),
+                    ) -> StatusClientsResponse:
+    
+    if client_id:
+        db_client = db.query(Client).filter(Client.id == client_id).first()
+    else:
+        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+    
+    
+    assigned_user = db.query(User).filter(User.username == username).first()
+    if not assigned_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    db_client.user_id = assigned_user.id
+    
+    try:
+        db.commit()
+        db.refresh(db_client)
+        response = StatusClientsResponse(
+            status="change"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusClientsResponse(
+            status="error",
+            details=f"Failed to delegete client: {str(e)}"
+        )
+
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response
+
 @router.post("/clients/add", response_model=StatusClientsResponse, operation_id="add-client")
 async def create_client(client: ClientCreate, 
                         db: Session = Depends(get_db),
