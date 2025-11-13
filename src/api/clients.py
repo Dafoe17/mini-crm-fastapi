@@ -10,14 +10,14 @@ router = APIRouter(tags=['Clients'])
 
 @router.get("/clients/get", response_model=ClientsListResponse, operation_id="get-all-clients")
 async def get_all_clients(db: Session = Depends(get_db), 
-                    _: User = Depends(require_roles('admin', 'manager')),
-                    skip: int = Query(None, description="Number of users to skip"),
-                    limit: int = Query(None, description="Number of users to return"),
-                    search: str | None = Query(None, description="Search by name, email or phone"),
-                    related_to_user: str | None = Query(None, description="Filter clients related to user"),
-                    sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
-                    order: SortOrder = Query("asc", description="Sort order: asc or desc"),
-                    ) -> ClientsListResponse:
+                          _: User = Depends(require_roles('admin', 'manager')),
+                          skip: int = Query(None, description="Number of clients to skip"),
+                          limit: int = Query(None, description="Number of clients to return"),
+                          search: str | None = Query(None, description="Search by name, email or phone"),
+                          related_to_user: str | None = Query(None, description="Filter clients related to user"),
+                          sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
+                          order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                        ) -> ClientsListResponse:
     
     query = db.query(Client)
 
@@ -50,8 +50,8 @@ async def get_all_clients(db: Session = Depends(get_db),
 @router.get("/clients/get/my", response_model=ClientsListResponse, operation_id="get-my-clients")
 async def get_my_clients(db: Session = Depends(get_db), 
                     current_user: User = Depends(get_current_user),
-                    skip: int | None = Query(None, description="Number of users to skip"),
-                    limit: int | None = Query(None, description="Number of users to return"),
+                    skip: int | None = Query(None, description="Number of clients to skip"),
+                    limit: int | None = Query(None, description="Number of clients to return"),
                     search: str | None = Query(None, description="Search by name, email or phone"),
                     sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
                     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
@@ -84,8 +84,8 @@ async def get_my_clients(db: Session = Depends(get_db),
 @router.get("/clients/get/unassigned_clients", response_model=ClientsListResponse, operation_id="get-unassigned-clients")
 async def get_unassigned_clients(db: Session = Depends(get_db), 
                     _: User = Depends(get_current_user),
-                    skip: int | None = Query(None, description="Number of users to skip"),
-                    limit: int | None = Query(None, description="Number of users to return"),
+                    skip: int | None = Query(None, description="Number of clients to skip"),
+                    limit: int | None = Query(None, description="Number of clients to return"),
                     search: str | None = Query(None, description="Search by name, email or phone"),
                     sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
                     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
