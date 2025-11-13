@@ -1,7 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
-
 from src.api import main_router
+
+import warnings
+warnings.simplefilter("always")
 
 app = FastAPI()
 
