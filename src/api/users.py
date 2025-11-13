@@ -82,7 +82,7 @@ async def create_user(user: UserCreate,
         db.commit()
         db.refresh(db_user)
         response = StatusUsersResponse(
-            status="create",
+            status="created",
         )
     
     except Exception as e:
