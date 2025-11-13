@@ -119,7 +119,7 @@ async def get_unassigned_clients(db: Session = Depends(get_db),
 async def take_unassigned_clients(db: Session = Depends(get_db), 
                     current_user: User = Depends(get_current_user),
                     client_id: int | None = Query(None, description="Search client by id"),
-                    name: str = Query('Client', description="Search client by name"),
+                    name: str = Query("", description="Search client by name"),
                     ) -> StatusClientsResponse:
     
     if client_id:

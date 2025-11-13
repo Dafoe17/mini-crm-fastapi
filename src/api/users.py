@@ -48,10 +48,10 @@ async def get_all_users(db: Session = Depends(get_db),
         users=[UserRead.model_validate(user) for user in users]
     )
 
-@router.get("/users/get-user-by-id", response_model=UsersListResponse, operation_id="get-user-by-id")
-async def get_user_by_id(db: Session = Depends(get_db), 
-                    _: User = Depends(require_roles('admin', 'manager')),
-                    user_id = int,
+@router.get("/users/get-user-by-id/{user_id}", response_model=UsersListResponse, operation_id="get-user-by-id")
+async def get_user_by_id(user_id: int,
+                         db: Session = Depends(get_db), 
+                        _: User = Depends(require_roles('admin', 'manager')),
                     ) -> UsersListResponse:
 
     db_user = db.query(User).filter(User.id == user_id)
