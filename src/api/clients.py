@@ -33,7 +33,7 @@ async def get_all_clients(db: Session = Depends(get_db),
         (Client.phone.ilike(f"%{search}%")))
 
     if hasattr(Client, sort_by):
-        sort_attr = getattr(User, sort_by)
+        sort_attr = getattr(Client, sort_by)
         query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
     else:
         raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
@@ -48,24 +48,69 @@ async def get_all_clients(db: Session = Depends(get_db),
         clients=[ClientRead.model_validate(client) for client in clients]
     )
 
-@router.post("/clients/add", response_model=ClientRead, operation_id="add-clients")
-async def create_client(client: ClientCreate, db: Session = Depends(get_db)) -> ClientRead:
-    db_user = db.query(User).filter(User.id == client.user_id).first()
-    if db_user is None:
-        raise HTTPException(status_code=404, detail='User not found')
+@router.get("/clients/get/my", response_model=ClientsListResponse, operation_id="get-my-clients")
+async def get_my_clients(db: Session = Depends(get_db), 
+                    current_user: User = Depends(get_current_user),
+                    skip: int = Query(None, description="Number of users to skip"),
+                    limit: int = Query(None, description="Number of users to return"),
+                    search: str | None = Query(None, description="Search by name, email or phone"),
+                    sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
+                    order: SortOrder = Query("asc", description="Sort order: asc or desc"),
+                    ) -> ClientsListResponse:
     
-    db_client = Client(user_id=client.user_id, 
-                       name=client.name, 
-                       email=client.email, 
-                       phone=client.phone, 
+    query = db.query(Client).filter(Client.user_id == current_user.id)
+
+    if search:
+        query = query.filter(
+        (Client.name.ilike(f"%{search}%")) |
+        (Client.email.ilike(f"%{search}%")) |
+        (Client.phone.ilike(f"%{search}%")))
+
+    if hasattr(Client, sort_by):
+        sort_attr = getattr(Client, sort_by)
+        query = query.order_by(sort_attr.desc() if order.lower() == "desc" else sort_attr.asc())
+    else:
+        raise HTTPException(status_code=400, detail=f"Invalid sort field: {sort_by}")
+
+    total_clients = query.count()
+    clients = query.offset(skip).limit(limit).all()
+
+    return ClientsListResponse(
+        total=total_clients,
+        skip=skip,
+        limit=limit,
+        clients=[ClientRead.model_validate(client) for client in clients]
+    )
+
+@router.post("/clients/add", response_model=StatusClientsResponse, operation_id="add-clients")
+async def create_client(client: ClientCreate, 
+                        db: Session = Depends(get_db),
+                        current_user: User = Depends(require_roles('admin', 'manager')),
+                        ) -> ClientRead:
+    
+    if current_user.role == 'manager' and client.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail=f"""Access denied. 
+                            Create clients related to you. 
+                            Only admin can add any client""")
+    
+    db_client = Client(user_id=client.user_id,
+                       name=client.name,
+                       email=client.email,
+                       phone=client.phone,
                        notes=client.notes)
     try:
         db.add(db_client)
         db.commit()
         db.refresh(db_client)
-    except:
+
+    except Exception as e:
         db.rollback() 
-    return db_client
+        raise e 
+    
+    return StatusClientsResponse(
+        status='created',
+        users=db_client
+    )
 
 @router.delete("/clients/delete/{client_id}", response_model=List[ClientRead], operation_id="delete-clients")
 async def delete_client(client_id: int, db: Session = Depends(get_db)) -> List[ClientRead]:
