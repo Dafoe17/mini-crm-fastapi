@@ -126,6 +126,9 @@ async def take_unassigned_clients(db: Session = Depends(get_db),
         db_client = db.query(Client).filter(Client.id == client_id).first()
     else:
         db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
     
     if db_client.user_id:
         raise HTTPException(status_code=400, detail=f"Client {db_client.name} is already assigned.")
@@ -162,6 +165,8 @@ async def delegete_unassigned_clients(db: Session = Depends(get_db),
     else:
         db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
     
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
     
     assigned_user = db.query(User).filter(User.username == username).first()
     if not assigned_user:
@@ -180,6 +185,40 @@ async def delegete_unassigned_clients(db: Session = Depends(get_db),
         response = StatusClientsResponse(
             status="error",
             details=f"Failed to delegete client: {str(e)}"
+        )
+
+    response.clients = ClientRead.model_validate(db_client)
+
+    return response
+
+@router.patch("/clients/patch/discharge", response_model=StatusClientsResponse, operation_id="discharge")
+async def discharge(db: Session = Depends(get_db), 
+                    _: User = Depends(require_roles('admin', 'manager')),
+                    client_id: int | None = Query(None, description="Search client by id"),
+                    name: str = Query("", description="Search client by name"),
+                    ) -> StatusClientsResponse:
+    
+    if client_id:
+        db_client = db.query(Client).filter(Client.id == client_id).first()
+    else:
+        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+    
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+
+    db_client.user_id = None
+    
+    try:
+        db.commit()
+        db.refresh(db_client)
+        response = StatusClientsResponse(
+            status="changed"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusClientsResponse(
+            status="error",
+            details=f"Failed to discharge user from client: {str(e)}"
         )
 
     response.clients = ClientRead.model_validate(db_client)
@@ -279,7 +318,7 @@ async def update_client(client: ClientCreate,
 
     return response
 
-@router.delete("/clients/delete/{client_id}", response_model=StatusClientsResponse, operation_id="delete-client")
+@router.delete("/clients/delete/", response_model=StatusClientsResponse, operation_id="delete-client")
 async def delete_client(name: str = Query("", description="Delete by name"),
                         db: Session = Depends(get_db),
                         _: User = Depends(require_roles('admin')),
