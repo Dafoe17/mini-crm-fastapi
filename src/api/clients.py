@@ -51,8 +51,8 @@ async def get_all_clients(db: Session = Depends(get_db),
 @router.get("/clients/get/my", response_model=ClientsListResponse, operation_id="get-my-clients")
 async def get_my_clients(db: Session = Depends(get_db), 
                     current_user: User = Depends(get_current_user),
-                    skip: int = Query(None, description="Number of users to skip"),
-                    limit: int = Query(None, description="Number of users to return"),
+                    skip: int | None = Query(None, description="Number of users to skip"),
+                    limit: int | None = Query(None, description="Number of users to return"),
                     search: str | None = Query(None, description="Search by name, email or phone"),
                     sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
                     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
@@ -82,18 +82,22 @@ async def get_my_clients(db: Session = Depends(get_db),
         clients=[ClientRead.model_validate(client) for client in clients]
     )
 
-@router.post("/clients/add", response_model=StatusClientsResponse, operation_id="add-clients")
+@router.post("/clients/add", response_model=StatusClientsResponse, operation_id="add-client")
 async def create_client(client: ClientCreate, 
                         db: Session = Depends(get_db),
                         current_user: User = Depends(require_roles('admin', 'manager')),
                         ) -> ClientRead:
     
-    if current_user.role == 'manager' and client.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail=f"""Access denied. 
-                            Create clients related to you. 
-                            Only admin can add any client""")
-    
-    db_client = Client(user_id=client.user_id,
+    if current_user.role == 'manager':
+        user_id = current_user.id
+
+    else:
+        assigned_user = db.query(User).filter(User.username == client.user_username).first()
+        if not assigned_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        user_id = assigned_user.id
+
+    db_client = Client(user_id=user_id,
                        name=client.name,
                        email=client.email,
                        phone=client.phone,
@@ -109,10 +113,61 @@ async def create_client(client: ClientCreate,
     
     return StatusClientsResponse(
         status='created',
-        users=db_client
+        clients=ClientRead.model_validate(db_client)
     )
 
-@router.delete("/clients/delete/{client_id}", response_model=List[ClientRead], operation_id="delete-clients")
+@router.put("/clients/update", response_model=StatusClientsResponse, operation_id="update-client")
+async def update_client(client: ClientCreate,
+                        db: Session = Depends(get_db),
+                        current_user: User = Depends(require_roles('admin', 'manager')),
+                        client_id: int | None = Query(None, description="Search by id"),
+                        name: str = Query('Client', description="Search by name"),
+                        ) -> ClientRead:
+    
+    if client_id:
+        db_client = db.query(Client).filter(Client.id == client_id).first()
+    else:
+        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+
+    if not db_client:
+            raise HTTPException(status_code=404, detail="Client not found")
+    
+    assigned_user = db.query(User).filter(User.username == client.user_username).first()
+    if not assigned_user:
+            raise HTTPException(status_code=404, detail="User not found")
+    
+    if current_user.role == 'manager':
+        if assigned_user.id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail=f""""Access denied. 
+                Your role able to update only clients related to your user"""
+            )
+
+    user_id = assigned_user.id
+    
+    db_client = Client(
+        user_id=user_id,
+        name=client.name,
+        email=client.email,
+        phone=client.phone,
+        notes=client.notes
+    )
+
+    try:
+        db.commit()
+        db.refresh(db_client)
+
+    except Exception as e:
+        db.rollback() 
+        raise e 
+    
+    return StatusClientsResponse(
+        status='changed',
+        clients=ClientRead.model_validate(db_client)
+    )
+
+@router.delete("/clients/delete/{client_id}", response_model=List[ClientRead], operation_id="delete-client")
 async def delete_client(client_id: int, db: Session = Depends(get_db)) -> List[ClientRead]:
     client = db.query(Client).filter(Client.id == client_id).first()
     if not client:
