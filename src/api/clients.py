@@ -86,7 +86,7 @@ async def get_my_clients(db: Session = Depends(get_db),
 async def create_client(client: ClientCreate, 
                         db: Session = Depends(get_db),
                         current_user: User = Depends(require_roles('admin', 'manager')),
-                        ) -> ClientRead:
+                        ) -> StatusClientsResponse:
     
     if current_user.role == 'manager':
         user_id = current_user.id
@@ -122,7 +122,7 @@ async def update_client(client: ClientCreate,
                         current_user: User = Depends(require_roles('admin', 'manager')),
                         client_id: int | None = Query(None, description="Search by id"),
                         name: str = Query('Client', description="Search by name"),
-                        ) -> ClientRead:
+                        ) -> StatusClientsResponse:
     
     if client_id:
         db_client = db.query(Client).filter(Client.id == client_id).first()
@@ -167,12 +167,23 @@ async def update_client(client: ClientCreate,
         clients=ClientRead.model_validate(db_client)
     )
 
-@router.delete("/clients/delete/{client_id}", response_model=List[ClientRead], operation_id="delete-client")
-async def delete_client(client_id: int, db: Session = Depends(get_db)) -> List[ClientRead]:
-    client = db.query(Client).filter(Client.id == client_id).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
+@router.delete("/clients/delete/{client_id}", response_model=StatusClientsResponse, operation_id="delete-client")
+async def delete_client(db: Session = Depends(get_db),
+                        _: User = Depends(require_roles('admin')),
+                        client_id: int | None = Query(None, description="Delete by id"),
+                        name: str = Query('Client', description="Delete by name")
+                        ) -> StatusClientsResponse:
+
+    if client_id:
+        db_client = db.query(Client).filter(Client.id == client_id).first()
+    else:
+        db_client = db.query(Client).filter((Client.name.ilike(f"%{name}%"))).first()
+
+    if not db_client:
+            raise HTTPException(status_code=404, detail="Client not found")
     
-    db.delete(client)
-    db.commit()
-    return db.query(Client).all()
+    try:
+        db.delete(db_client)
+        db.commit()
+    except:
+        return db.query(Client).all()
