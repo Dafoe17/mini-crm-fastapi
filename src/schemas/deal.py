@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime
-from src.enums import DealStatus
+from typing import Optional, List, Union
+from src.enums import DealStatus, ActionStatus
 
 
 class DealBase(BaseModel):
@@ -25,3 +26,14 @@ class DealCreate(DealBase):
 
 class DealUpdate(DealBase):
     model_config = ConfigDict(partial=True)
+
+class StatusDealsResponse(BaseModel):
+    status: ActionStatus
+    clients: Optional[Union[List[DealRead], DealRead]] = None
+    details: Optional[str] = None
+
+class DealsListResponse(BaseModel):
+    total: int = Field(ge=0)
+    skip: Optional[int] = Field(default=None, ge=0)
+    limit: Optional[int] = Field(default=None, ge=0)
+    clients: Optional[Union[List[DealRead], DealRead]] = None
