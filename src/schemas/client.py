@@ -2,7 +2,7 @@ from pydantic import BaseModel, ConfigDict, StringConstraints, EmailStr, Field
 from typing import Optional, List, Annotated, Union
 from src.enums import ActionStatus
 
-PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?[()\d\s-]{7,20}$")]
+PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?(7|8)\d{10}$")]
 
 class ClientBase(BaseModel):
     name: str = Field(max_length=50, min_length=2, strip_whitespace=True)
@@ -23,7 +23,7 @@ class ClientUpdate(ClientBase):
 
 class StatusClientsResponse(BaseModel):
     status: ActionStatus
-    clients: Union[List[ClientRead], ClientRead]
+    clients: Optional[Union[List[ClientRead], ClientRead]] = None
     details: Optional[str] = None
 
 class ClientsListResponse(BaseModel):
