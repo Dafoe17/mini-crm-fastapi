@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
 from src.enums import SortOrder
