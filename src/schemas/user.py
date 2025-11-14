@@ -42,10 +42,6 @@ class UserCreate(UserBase):
             raise ValueError("Password must contain at least one special symbols (!.,_)")
         return hash_password(value)
 
-class UserUpdate(UserCreate):
-
-    model_config = ConfigDict(partial=True)
-
 class StatusUsersResponse(BaseModel):
     status: ActionStatus 
     users: Optional[Union[List[UserRead], UserRead]] = None

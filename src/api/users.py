@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
-from typing import Optional
 
 from src.enums import SortOrder
 from src.models import User

@@ -23,9 +23,6 @@ class ClientRead(ClientBase):
 class ClientCreate(ClientBase):
     user_name: Optional[str] = None
 
-class ClientUpdate(ClientBase):
-    model_config = ConfigDict(partial=True)
-
 class StatusClientsResponse(BaseModel):
     status: ActionStatus
     clients: Optional[Union[List[ClientRead], ClientRead]] = None
