@@ -117,10 +117,10 @@ async def get_unassigned_clients(db: Session = Depends(get_db),
 
 @router.patch("/clients/patch/take_client", response_model=StatusClientsResponse, operation_id="take-unassigned-client")
 async def take_unassigned_clients(db: Session = Depends(get_db), 
-                    current_user: User = Depends(get_current_user),
-                    client_id: int | None = Query(None, description="Search client by id"),
-                    name: str = Query("", description="Search client by name"),
-                    ) -> StatusClientsResponse:
+                                 current_user: User = Depends(get_current_user),
+                                 client_id: int | None = Query(None, description="Search client by id"),
+                                 name: str = Query("", description="Search client by name"),
+                                 ) -> StatusClientsResponse:
     
     if client_id:
         db_client = db.query(Client).filter(Client.id == client_id).first()
@@ -154,7 +154,7 @@ async def take_unassigned_clients(db: Session = Depends(get_db),
 
 @router.patch("/clients/patch/delegate_client", response_model=StatusClientsResponse, operation_id="delegete-unassigned-client")
 async def delegete_unassigned_clients(db: Session = Depends(get_db), 
-                    _: User = Depends(require_roles('admin', 'manager')),
+                    _: User = Depends(require_roles('admin')),
                     username: str = Query('User', description="Search user by name"),
                     client_id: int | None = Query(None, description="Search client by id"),
                     name: str = Query("", description="Search client by name"),
@@ -193,7 +193,7 @@ async def delegete_unassigned_clients(db: Session = Depends(get_db),
 
 @router.patch("/clients/patch/discharge", response_model=StatusClientsResponse, operation_id="discharge")
 async def discharge(db: Session = Depends(get_db), 
-                    _: User = Depends(require_roles('admin', 'manager')),
+                    _: User = Depends(require_roles('admin')),
                     client_id: int | None = Query(None, description="Search client by id"),
                     name: str = Query("", description="Search client by name"),
                     ) -> StatusClientsResponse:
@@ -234,14 +234,19 @@ async def create_client(client: ClientCreate,
     if query:
         raise HTTPException(status_code=404, detail="Client already exists")
     
-    if current_user.role == 'manager':
-        user_id = current_user.id
+    assigned_user = db.query(User).filter(User.username == client.user_name).first()
 
-    else:
-        assigned_user = db.query(User).filter(User.username == client.user_name).first()
-        if not assigned_user:
+    if current_user.role == 'manager' and assigned_user.id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail=f""""Access denied. 
+            Your role able to create only clients related to your user"""
+        )
+
+    if not assigned_user:
             raise HTTPException(status_code=404, detail="User not found")
-        user_id = assigned_user.id
+    
+    user_id = assigned_user.id
 
     db_client = Client(user_id=user_id,
                        name=client.name,
@@ -283,6 +288,8 @@ async def update_client(client: ClientCreate,
     if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")
     
+    assigned_user = db.query(User).filter(User.username == client.user_name).first()
+
     if current_user.role == 'manager':
         if assigned_user.id != current_user.id:
             raise HTTPException(
@@ -291,7 +298,6 @@ async def update_client(client: ClientCreate,
                 Your role able to update only clients related to your user"""
             )
         
-    assigned_user = db.query(User).filter(User.username == client.user_name).first()
     if not assigned_user:
             raise HTTPException(status_code=404, detail="User not found")
     
