@@ -283,10 +283,6 @@ async def update_client(client: ClientCreate,
     if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")
     
-    assigned_user = db.query(User).filter(User.username == client.user_name).first()
-    if not assigned_user:
-            raise HTTPException(status_code=404, detail="User not found")
-    
     if current_user.role == 'manager':
         if assigned_user.id != current_user.id:
             raise HTTPException(
@@ -294,6 +290,10 @@ async def update_client(client: ClientCreate,
                 detail=f""""Access denied. 
                 Your role able to update only clients related to your user"""
             )
+        
+    assigned_user = db.query(User).filter(User.username == client.user_name).first()
+    if not assigned_user:
+            raise HTTPException(status_code=404, detail="User not found")
     
     db_client.user_id = assigned_user.id
     db_client.name = client.name
