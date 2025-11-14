@@ -1,15 +1,13 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from src.schemas.deal import DealRead
-from datetime import datetime
+from datetime import datetime, timezone
 from src.enums import TaskStatus
 from typing import Optional
 
 
 class TaskBase(BaseModel):
-    deal_id: int = Field(gt=0)
     title: str = Field(max_length=50, min_length=2, json_schema_extra={"strip_whitespace": True})
     description: Optional[str] = Field(default="", max_length=200, json_schema_extra={"strip_whitespace": True}) 
-    due_date: datetime | None
+    due_date: datetime | None = None
     status: TaskStatus
 
     @field_validator("title")
@@ -19,15 +17,28 @@ class TaskBase(BaseModel):
     @field_validator("description")
     def strip_description(cls, v):
         return v.strip()
+    
+    @field_validator("due_date")
+    def due_date_not_in_past(cls, value):
+        if value is None:
+            return value
+
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+
+        if value <= datetime.now(timezone.utc):
+            raise ValueError("due_date must be in the future")
+        return value
 
 class TaskRead(TaskBase):
+    created_at: datetime
+    updated_at: datetime
     id: int
-    deal: DealRead
 
     model_config = ConfigDict(from_attributes=True)
 
 class TaskCreate(TaskBase):
-    pass
+    user_name: Optional[str] = None
 
 class TaskUpdate(TaskBase):
     model_config = ConfigDict(partial=True)
