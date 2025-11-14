@@ -10,6 +10,18 @@ class DealBase(BaseModel):
     value: int = Field(gt=0)
     closed_at: datetime | None = None
 
+    @field_validator("closed_at")
+    def closed_at_not_in_past(cls, value):
+        if value is None:
+            return value
+
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+
+        if value <= datetime.now(timezone.utc):
+            raise ValueError("closed_at must be in the future")
+        return value
+
     @field_validator("title")
     def strip_title(cls, v):
         return v.strip()
@@ -23,21 +35,6 @@ class DealRead(DealBase):
 
 class DealCreate(DealBase):
     client_name: Optional[str] = None
-    
-    @field_validator("closed_at")
-    def closed_at_not_in_past(cls, value):
-        if value is None:
-            return value
-
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-
-        if value <= datetime.now(timezone.utc):
-            raise ValueError("closed_at must be in the future")
-        return value
-
-class DealUpdate(DealBase):
-    model_config = ConfigDict(partial=True)
 
 class StatusDealsResponse(BaseModel):
     status: ActionStatus
