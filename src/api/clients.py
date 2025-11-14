@@ -226,7 +226,7 @@ async def discharge(db: Session = Depends(get_db),
     return response
 
 @router.post("/clients/add", response_model=StatusClientsResponse, operation_id="add-client")
-async def create_client(client: ClientCreate, 
+async def add_client(client: ClientCreate, 
                         db: Session = Depends(get_db),
                         current_user: User = Depends(require_roles('admin', 'manager')),
                         ) -> StatusClientsResponse:

@@ -327,7 +327,7 @@ async def set_close_date(date: datetime = Query('', description="Set exact day")
     return response
 
 @router.patch("/deals/patch/set_status", response_model=DealsListResponse, operation_id="set_status")
-async def set_status(status: DealStatus = Query("new", description="Set new status: new, in_progress and closed"),
+async def set_status(status: DealStatus = Query("new", description="Set new status: new, in_progress or closed"),
                     db: Session = Depends(get_db),
                     current_user: User = Depends(require_roles('admin', 'manager')),
                     deal_id: int | None = Query(None, description="Search deal by id"),
@@ -501,10 +501,10 @@ async def delete_deal(title: str = Query("", description="Delete by title"),
 
 @router.delete("/deals/delete-by-client", response_model=StatusDealsResponse, operation_id="delete-by-client")
 async def delete_by_client(client_name: str = Query("", description="Delete by title"),
-                      client_id: int | None = Query(None, description="Delete by id"),
-                      db: Session = Depends(get_db),
-                      _: User = Depends(require_roles('admin')),
-                      ) -> StatusDealsResponse:
+                            client_id: int | None = Query(None, description="Delete by id"),
+                            db: Session = Depends(get_db),
+                            _: User = Depends(require_roles('admin')),
+                            ) -> StatusDealsResponse:
     if client_id:
         db_deals = db.query(Deal).filter((Deal.client_id == client_id))
     else:

@@ -65,7 +65,7 @@ async def get_user_by_id(user_id: int,
     )
 
 @router.post("/users/add", response_model=StatusUsersResponse, operation_id="add-user")
-async def create_user(user: UserCreate, 
+async def add_user(user: UserCreate, 
                       db: Session = Depends(get_db),
                       _: User = Depends(require_roles('admin'))
                       ) -> StatusUsersResponse:
