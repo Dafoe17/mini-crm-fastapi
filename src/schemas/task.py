@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from datetime import datetime, timezone
-from src.enums import TaskStatus
-from typing import Optional
+from src.enums import TaskStatus, ActionStatus
+from typing import Optional, Union, List
 
 
 class TaskBase(BaseModel):
@@ -42,3 +42,14 @@ class TaskCreate(TaskBase):
 
 class TaskUpdate(TaskBase):
     model_config = ConfigDict(partial=True)
+
+class StatusTasksResponse(BaseModel):
+    status: ActionStatus
+    clients: Optional[Union[List[TaskRead], TaskRead]] = None
+    tasks: Optional[str] = None
+
+class TasksListResponse(BaseModel):
+    total: int = Field(ge=0)
+    skip: Optional[int] = Field(default=None, ge=0)
+    limit: Optional[int] = Field(default=None, ge=0)
+    tasks: Optional[Union[List[TaskRead], TaskRead]] = None
