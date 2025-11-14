@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from src.api.dependencies import Session, get_db, require_roles
 
 from datetime import datetime, timedelta, timezone
-from src.enums import SortOrder
+from src.enums import SortOrder, DealStatus
 from src.models import User, Client, Deal
 from src.schemas.deal import DealRead, DealCreate, DealsListResponse, StatusDealsResponse
 
@@ -281,6 +281,96 @@ async def get_by_closed_date(db: Session = Depends(get_db),
         deals=[DealRead.model_validate(deal) for deal in deals]
     )
 
+@router.patch("/deals/patch/set-close-date", response_model=StatusDealsResponse, operation_id="set-close-date")
+async def set_close_date(date: datetime = Query('', description="Set exact day"),
+                        db: Session = Depends(get_db),
+                        current_user: User = Depends(require_roles('admin', 'manager')),
+                        deal_id: int | None = Query(None, description="Search deal by id"),
+                        title: str = Query("", description="Search deal by title"),
+                        ) -> StatusDealsResponse:
+    if deal_id:
+        db_deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    else:
+        db_deal = db.query(Deal).filter((Deal.title.ilike(f"%{title}%"))).first()
+    
+    if not db_deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    client_id = db.query(Client.user_id).filter(Client.id == db_deal.client_id).first()
+    user_id = db.query(User.id).filter(User.id == client_id[0]).first()
+    
+    if current_user.role == 'manager':
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail=f""""Access denied. 
+                Your role able to update only deals related to your user"""
+            )
+
+    db_deal.closed_at = date
+
+    try:
+        db.commit()
+        db.refresh(db_deal)
+        response = StatusDealsResponse(
+            status="changed"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to change date from deal: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deal)
+
+    return response
+
+@router.patch("/deals/patch/set_status", response_model=DealsListResponse, operation_id="set_status")
+async def set_status(status: DealStatus = Query("new", description="Set new status: new, in_progress and closed"),
+                    db: Session = Depends(get_db),
+                    current_user: User = Depends(require_roles('admin', 'manager')),
+                    deal_id: int | None = Query(None, description="Search deal by id"),
+                    title: str = Query("", description="Search deal by title"),
+                    ) -> StatusDealsResponse:
+    if deal_id:
+        db_deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    else:
+        db_deal = db.query(Deal).filter((Deal.title.ilike(f"%{title}%"))).first()
+    
+    if not db_deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    client_id = db.query(Client.user_id).filter(Client.id == db_deal.client_id).first()
+    user_id = db.query(User.id).filter(User.id == client_id[0]).first()
+    
+    if current_user.role == 'manager':
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail=f""""Access denied. 
+                Your role able to do only deals related to your user"""
+            )
+
+    db_deal.status = status
+
+    try:
+        db.commit()
+        db.refresh(db_deal)
+        response = StatusDealsResponse(
+            status="changed"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to change status from deal: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deal)
+
+    return response
+
 @router.post("/deals/add", response_model=StatusDealsResponse, operation_id="add-deal")
 async def add_deal(deal: DealCreate, 
                    db: Session = Depends(get_db),
@@ -327,5 +417,119 @@ async def add_deal(deal: DealCreate,
         )
 
     response.deals = DealRead.model_validate(db_deal)
+
+    return response
+
+@router.put("/deals/update", response_model=StatusDealsResponse, operation_id="update-deal")
+async def update_deal(deal: DealCreate,
+                     db: Session = Depends(get_db),
+                     current_user: User = Depends(require_roles('admin', 'manager')),
+                     deal_id: int | None = Query(None, description="Search deal by id"),
+                     title: str = Query("", description="Search deal by title"),
+                     ) -> StatusDealsResponse:
+    if deal_id:
+        db_deal = db.query(Deal).filter(Deal.id == deal_id).first()
+    else:
+        db_deal = db.query(Deal).filter((Deal.title.ilike(f"%{title}%"))).first()
+    
+    if not db_deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    
+    client_id = db.query(Client.user_id).filter(Client.id == db_deal.client_id).first()
+    user_id = db.query(User.id).filter(User.id == client_id[0]).first()
+    
+    if current_user.role == 'manager':
+        if user_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail=f""""Access denied. 
+                Your role able to update only deals related to your user"""
+            )
+
+    db_deal.client_name = deal.client_name
+    db_deal.title = deal.status
+    db_deal.closed_at = deal.closed_at
+    db_deal.value = deal.value
+
+    try:
+        db.commit()
+        db.refresh(db_deal)
+        response = StatusDealsResponse(
+            status="changed"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to change deal: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deal)
+
+    return response
+
+@router.delete("/deals/delete", response_model=StatusDealsResponse, operation_id="delete-deal")
+async def delete_deal(title: str = Query("", description="Delete by title"),
+                      deal_id: int | None = Query(None, description="Delete by id"),
+                      db: Session = Depends(get_db),
+                      _: User = Depends(require_roles('admin')),
+                      ) -> StatusDealsResponse:
+    if deal_id:
+        db_deal = db.query(Deal).filter((Deal.id == deal_id)).first()
+    else:
+        db_deal = db.query(Deal).filter((Deal.title.ilike(f"%{title}%"))).first()
+
+    if not db_deal:
+            raise HTTPException(status_code=404, detail="Deal not found")
+    
+    try:
+        db.delete(db_deal)
+        db.commit()
+        response = StatusDealsResponse(
+            status="deleted",
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to delete client: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deal)
+
+    return response
+
+@router.delete("/deals/delete-by-client", response_model=StatusDealsResponse, operation_id="delete-by-client")
+async def delete_by_client(client_name: str = Query("", description="Delete by title"),
+                      client_id: int | None = Query(None, description="Delete by id"),
+                      db: Session = Depends(get_db),
+                      _: User = Depends(require_roles('admin')),
+                      ) -> StatusDealsResponse:
+    if client_id:
+        db_deals = db.query(Deal).filter((Deal.client_id == client_id))
+    else:
+        client_id = db.query(Client.id).filter((Client.name == client_name)).first()[0]
+        if not client_id:
+            raise HTTPException(status_code=404, detail="Client not found")
+        db_deals = db.query(Deal).filter((Deal.client_id == client_id)).all()
+    
+    if db_deals.count() == 0:
+        raise HTTPException(status_code=404, detail="Deals not found")
+    
+    try:
+        deleted_count = db_deals.delete(synchronize_session='fetch')
+        db.commit()
+        response = StatusDealsResponse(
+            status="deleted",
+            details=f"Deleted {deleted_count} deals: {str(e)}"
+        )
+    except Exception as e:
+        db.rollback()
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to delete deals: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deals)
 
     return response
