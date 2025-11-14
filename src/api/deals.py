@@ -1,5 +1,4 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
-from typing import List
 from src.api.dependencies import Session, get_db, require_roles
 
 from src.enums import SortOrder
@@ -64,3 +63,51 @@ async def get_all_deals(db: Session = Depends(get_db),
         clients=[Deal.model_validate(deal) for deal in deals]
     )
 
+@router.post("/deals/add", response_model=StatusDealsResponse, operation_id="add-deal")
+async def add_deal(deal: DealCreate, 
+                   db: Session = Depends(get_db),
+                   current_user: User = Depends(require_roles('admin', 'manager')),
+                   ) -> StatusDealsResponse:
+    query = db.query(Deal).filter(Deal.title == deal.title).first()
+    if query:
+        raise HTTPException(status_code=404, detail="Deal already exists")
+    
+    if current_user.role == 'manager':
+        user_id = current_user.id
+        client_names = db.query(Client.name).filter(Client.user_id == user_id)
+        if deal.client_name in (client_names):
+            raise HTTPException(
+                status_code=403,
+                detail=f""""Access denied. 
+                Your role able to create only deals related to your user"""
+            )
+
+    assigned_client = db.query(Client.id).filter(Client.name == deal.client_name).first()
+    if not assigned_client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    user_id = assigned_client.id
+
+    db_deal = Deal(client_id=user_id,
+                   title=deal.title,
+                   status=deal.status,
+                   value=deal.value,
+                   closed_at=deal.closed_at)
+    
+    try:
+        db.add(db_deal)
+        db.commit()
+        db.refresh(db_deal)
+        response = StatusDealsResponse(
+            status="created",
+        )
+    
+    except Exception as e:
+        db.rollback() 
+        response = StatusDealsResponse(
+            status="error",
+            details=f"Failed to create deal: {str(e)}"
+        )
+
+    response.deals = DealRead.model_validate(db_deal)
+
+    return response
