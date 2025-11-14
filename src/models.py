@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime
+from datetime import datetime, timezone
 from sqlalchemy.orm import relationship
 from src.database import Base
 from src.enums import DealStatus, TaskStatus, UserRole
@@ -40,8 +41,12 @@ class Deal(Base):
     title = Column(String, nullable=False, unique=True, index=True)
     status = Column(Enum(DealStatus), nullable=False, index=True)
     value = Column(Integer, nullable=False)
-    created_at = Column(DateTime, nullable=False, index=True)
-    closed_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), 
+                        default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
+    updated_at = Column(DateTime(timezone=True), 
+                        default=lambda: datetime.now(timezone.utc), 
+                        onupdate=lambda: datetime.now(timezone.utc))
+    closed_at = Column(DateTime(timezone=True), nullable=True, index=True)
 
 class Task(Base):
     __tablename__ = 'tasks'
