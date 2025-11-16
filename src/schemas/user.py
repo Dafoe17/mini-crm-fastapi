@@ -45,8 +45,7 @@ class UserCreate(UserBase):
 class StatusUsersResponse(BaseModel):
     status: ActionStatus 
     users: Optional[Union[List[UserRead], UserRead]] = None
-    details: Optional[str] = None
-
+    
 class UsersListResponse(BaseModel):
     total: int = Field(default=0, ge=0)
     skip: Optional[int] = Field(default=None, ge=0)

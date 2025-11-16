@@ -39,7 +39,6 @@ class DealCreate(DealBase):
 class StatusDealsResponse(BaseModel):
     status: ActionStatus
     deals: Optional[Union[List[DealRead], DealRead]] = None
-    details: Optional[str] = None
 
 class DealsListResponse(BaseModel):
     total: int = Field(ge=0)

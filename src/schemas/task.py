@@ -45,8 +45,7 @@ class TaskUpdate(TaskBase):
 
 class StatusTasksResponse(BaseModel):
     status: ActionStatus
-    clients: Optional[Union[List[TaskRead], TaskRead]] = None
-    tasks: Optional[str] = None
+    tasks: Optional[Union[List[TaskRead], TaskRead]] = None
 
 class TasksListResponse(BaseModel):
     total: int = Field(ge=0)
