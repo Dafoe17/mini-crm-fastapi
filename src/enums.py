@@ -24,3 +24,8 @@ class ActionStatus(str, Enum):
 class SortOrder(str, Enum):
     asc = "asc"
     desc = "desc"
+
+class DateColumn(str, Enum):
+    created_at = "created_at"
+    updated_at = "updated_at"
+    closed_at = "closed_at"
