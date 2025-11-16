@@ -1,4 +1,4 @@
-from sqlalchemy import _or 
+from sqlalchemy import or_ 
 from sqlalchemy.orm import Session
 from src.models import Client
 
@@ -24,7 +24,7 @@ class ClientsRepository:
 
     @staticmethod
     def search(search: str):
-        return _or(
+        return or_(
             Client.name.ilike(f"%{search}%"),
             Client.email.ilike(f"%{search}%"),
             Client.phone.ilike(f"%{search}%")

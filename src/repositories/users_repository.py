@@ -31,11 +31,12 @@ class UsersRepository:
         query = db.query(User)
         if filters:
             query = query.filter(*filters)
-        return query.all()
+        return query
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):
-        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc()).all()
+        sort_attr = getattr(User, sort_attr, User.username)
+        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc())
 
     @staticmethod
     def paginate(query, skip: int | None, limit: int | None) -> list[User]:

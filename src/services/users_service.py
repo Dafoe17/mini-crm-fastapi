@@ -29,10 +29,10 @@ class UsersService:
         filters = []
 
         if role:
-            filters.append(UsersRepository.filter_by_role(query, role))
+            filters.append(UsersRepository.filter_by_role(role))
 
         if search:
-            filters.append(UsersRepository.search(query, search))
+            filters.append(UsersRepository.search(search))
 
         sort_by = "role_level" if sort_by == "role" else sort_by
 

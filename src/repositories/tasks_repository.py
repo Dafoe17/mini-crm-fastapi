@@ -1,4 +1,4 @@
-from sqlalchemy import _or
+from sqlalchemy import or_ 
 from sqlalchemy.orm import Session, Query
 from src.models import User, Task
 from datetime import datetime, timezone
@@ -29,7 +29,7 @@ class TasksRepository:
     
     @staticmethod
     def search(search: str):
-        return _or(
+        return or_(
             Task.title.ilike(f"%{search}%"),
             Task.description.ilike(f"%{search}%"),
             Task.status.ilike(f"%{search}%")
@@ -40,7 +40,7 @@ class TasksRepository:
         query = db.query(Task)
         if filters:
             query = query.filter(*filters)
-        return query.all()
+        return query
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):

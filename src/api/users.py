@@ -78,7 +78,7 @@ async def update_user(
     _: User = Depends(require_roles('admin')),
     ):
     
-    return UsersService.add_user(
+    return UsersService.update_user(
         user=user,
         username=username,
         db=db,
@@ -91,7 +91,7 @@ async def delete_user(
     _: User = Depends(require_roles('admin'))
     ):
 
-    return UsersService.add_user(
+    return UsersService.delete_user(
         username=username,
         db=db,
     )
