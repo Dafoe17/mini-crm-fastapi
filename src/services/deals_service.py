@@ -37,13 +37,13 @@ class DealsService:
         filters = []
         
         if related_to_client:
-            filters.append(DealsRepository.get_by_client_name(db, related_to_client))
+            filters.append(DealsRepository.get_by_client_name(related_to_client))
 
         if related_to_me:
             related_to_user = current_user.username
 
         if related_to_user:
-            filters.append(query = DealsRepository.get_by_username(db, related_to_user))
+            filters.append(DealsRepository.get_by_username(related_to_user))
         
         if search:
             filters.append(DealsRepository.search(search))
@@ -54,7 +54,7 @@ class DealsService:
         if less_than:
             filters.append(DealsRepository.less_than(less_than))
         
-        query = DealsRepository.apply_filters(query, sort_by, order)
+        query = DealsRepository.apply_filters(db, filters)
         query = DealsRepository.apply_sorting(query, sort_by, order)
         total_deals = DealsRepository.count(query)
         deals = DealsRepository.paginate(query, skip, limit)
@@ -63,7 +63,7 @@ class DealsService:
             total=total_deals,
             skip=skip,
             limit=limit,
-            deals=[DealsListResponse.model_validate(deal) for deal in deals]
+            deals=[DealRead.model_validate(deal) for deal in deals]
         )
     
     @staticmethod
@@ -90,13 +90,13 @@ class DealsService:
         filters = []
 
         if related_to_client:
-            filters.append(DealsRepository.get_by_client_name(db, related_to_client))
+            filters.append(DealsRepository.get_by_client_name(related_to_client))
 
         if related_to_me:
             related_to_user = current_user.username
 
         if related_to_user:
-            filters.append(DealsRepository.get_by_username(db, related_to_user))
+            filters.append(DealsRepository.get_by_username(related_to_user))
         
         if search:
             filters.append(DealsRepository.search(query, search))
@@ -128,7 +128,7 @@ class DealsService:
             total=total_deals,
             skip=skip,
             limit=limit,
-            deals=[DealsListResponse.model_validate(deal) for deal in deals]
+            deals=[DealRead.model_validate(deal) for deal in deals]
         )
 
     @staticmethod
@@ -239,10 +239,10 @@ class DealsService:
         if not db_deal:
             raise HTTPException(status_code=404, detail="Deal not found")
         
-        client_id = ClientsRepository.get_by_id(db, db_deal.client_id)
+        db_client = ClientsRepository.get_by_id(db, db_deal.client_id)
         
         if current_user.role == 'manager':
-            user_id = UsersRepository.get_by_id(db, client_id.user_id)
+            user_id = UsersRepository.get_by_id(db, db_client.user_id)
             if user_id != current_user.id:
                 raise HTTPException(
                     status_code=403,
@@ -251,9 +251,9 @@ class DealsService:
                 )
 
         try:
-            created_client = ClientsRepository.update(db, 
+            Updated_deal = DealsRepository.update(db, 
                                                     db_deal,
-                                                    client_id,
+                                                    db_client.id,
                                                     db_deal.title,
                                                     db_deal.status,
                                                     db_deal.value,
@@ -261,7 +261,7 @@ class DealsService:
             
             return StatusDealsResponse(
                 status="changed",
-                deals=DealRead.model_validate(created_client)
+                deals=DealRead.model_validate(Updated_deal)
             )
         
         except Exception as e:
@@ -297,7 +297,7 @@ class DealsService:
 
         try:
             created_deal = DealsRepository.add(db, 
-                                               deal.assigned_client.id,
+                                               assigned_client.id,
                                                deal.title,
                                                deal.status,
                                                deal.value,
@@ -310,32 +310,6 @@ class DealsService:
         except Exception as e:
             DealsRepository.rollback(db)
             raise HTTPException(500, f"Failed to create deal: {str(e)}")
-
-    @staticmethod
-    def delete_deal(
-        title: str,
-        deal_id: int | None,
-        db: Session,
-        ):
-
-        if deal_id:
-            db_deal = DealsRepository.get_by_id(deal_id)
-        else:
-            db_deal = DealsRepository.get_by_title(title)
-
-        if not db_deal:
-                raise HTTPException(status_code=404, detail="Deal not found")
-        
-        try:
-            deleted_deal = DealsRepository.delete(db, db_deal)
-            db.delete(db_deal)
-            db.commit()
-            return StatusDealsResponse(
-                status="deleted",
-                deals=DealRead.model_validate(deleted_deal)
-            )
-        except Exception as e:
-            raise HTTPException(500, f"Failed to delete deal: {str(e)}")
         
     @staticmethod
     def delete_deal(
@@ -345,9 +319,9 @@ class DealsService:
         ):
 
         if deal_id:
-            db_deal = DealsRepository.get_by_id(deal_id)
+            db_deal = DealsRepository.get_by_id(db, deal_id)
         else:
-            db_deal = DealsRepository.get_by_title(title)
+            db_deal = DealsRepository.get_by_title(db, title)
 
         if not db_deal:
                 raise HTTPException(status_code=404, detail="Deal not found")
@@ -368,16 +342,29 @@ class DealsService:
         db: Session,
         ):
 
-        if not client_id:
-            client_id = DealsRepository.get_by_client_name(client_name)
-            if not client_id:
+        filters = []
+
+        if client_id:
+            client = ClientsRepository.get_by_id(db, client_id)
+            if not client:
                 raise HTTPException(status_code=404, detail="Client not found")
+            
+            client_name = client.name
+
+        filters.append(DealsRepository.get_by_client_name(client_name))
+
+        query = DealsRepository.apply_filters(db, filters)
+
+        deals_to_delete = query.all()
+        if not deals_to_delete:
+            raise HTTPException(status_code=404, detail="No deals for this client")
         
         try:
-            deleted_deal = DealsRepository.delete_all_by_client(db, client_id)
+            _ = DealsRepository.delete_group(db, query)
             return StatusDealsResponse(
                 status="deleted",
-                deals=DealRead.model_validate(deleted_deal)
+                deals=[DealRead.model_validate(deal_to_delete) for deal_to_delete in deals_to_delete]
             )
+        
         except Exception as e:
             raise HTTPException(500, f"Failed to delete deals: {str(e)}")

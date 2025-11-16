@@ -18,17 +18,6 @@ class TaskBase(BaseModel):
     def strip_description(cls, v):
         return v.strip()
     
-    @field_validator("due_date")
-    def due_date_not_in_past(cls, value):
-        if value is None:
-            return value
-
-        if value.tzinfo is None:
-            value = value.replace(tzinfo=timezone.utc)
-
-        if value <= datetime.now(timezone.utc):
-            raise ValueError("due_date must be in the future")
-        return value
 
 class TaskRead(TaskBase):
     created_at: datetime
@@ -40,8 +29,16 @@ class TaskRead(TaskBase):
 class TaskCreate(TaskBase):
     user_name: Optional[str] = None
 
-class TaskUpdate(TaskBase):
-    model_config = ConfigDict(partial=True)
+    def due_date_not_in_past(cls, value):
+        if value is None:
+            return value
+
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+
+        if value <= datetime.now(timezone.utc):
+            raise ValueError("due_date must be in the future")
+        return value
 
 class StatusTasksResponse(BaseModel):
     status: ActionStatus

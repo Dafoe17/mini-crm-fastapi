@@ -1,4 +1,5 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select, and_
+from sqlalchemy.orm import Session, Query
 from src.models import User, Client, Deal
 from datetime import datetime, timedelta
 
@@ -13,14 +14,14 @@ class DealsRepository:
         return db.query(Deal).filter(Deal.title == title).first()
     
     @staticmethod
-    def get_by_client_name(db: Session, name: str):
-        client_ids = db.query(Client.id).filter(Client.name.islike(f"%{name}%")).subquery()
+    def get_by_client_name(name: str):
+        client_ids = select(Client.id).filter(Client.name == name)
         return Deal.client_id.in_(client_ids)
     
     @staticmethod
-    def get_by_username(db: Session, username: str):
-        user_ids = db.query(User.id).filter(User.username.islike(f"%{username}%")).subquery
-        client_ids = db.query(Client.id).filter(Client.user_id.in_(user_ids))
+    def get_by_username(username: str):
+        user_ids = select(User.id).filter(User.username == username)
+        client_ids = select(Client.id).filter(Client.user_id.in_(user_ids))
         return Deal.client_id.in_(client_ids)
     
     @staticmethod
@@ -40,7 +41,7 @@ class DealsRepository:
         start_of_day = datetime.combine(date.date(), datetime.min.time())
         end_of_day = datetime.combine(date.date(), datetime.max.time())
         col = getattr(Deal, attribute)
-        return col >= start_of_day, col <= end_of_day
+        return and_(col >= start_of_day, col <= end_of_day)
     
     @staticmethod
     def earlier_than(date: datetime, attribute: str):
@@ -62,17 +63,18 @@ class DealsRepository:
         end_of_month = next_month - timedelta(seconds=1)
 
         col = getattr(Deal, attribute)
-        return col >= start_of_month, col <= end_of_month
+        return and_(col >= start_of_month, col <= end_of_month)
     
     @staticmethod
     def apply_filters(db: Session, filters: list):
         query = db.query(Deal)
         if filters:
             query = query.filter(*filters)
-        return query.all()
+        return query
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):
+        sort_attr = getattr(Deal, sort_attr, Deal.title)
         query = query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc())
         return query
 
@@ -129,11 +131,10 @@ class DealsRepository:
         return deal
     
     @staticmethod
-    def delete_all_by_client(db: Session, client_id: int) -> list:
-        deals = db.query(Deal).filter((Deal.client_id == client_id)).all()
-        deals.delete(synchronize_session='fetch')
+    def delete_group(db: Session, query: Query) -> list: 
+        query.delete(synchronize_session='fetch')
         db.commit()
-        return deals
+        return 
 
     @staticmethod
     def rollback(db: Session):

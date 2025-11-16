@@ -68,11 +68,14 @@ class ClientsService:
                 detail=f"Invalid sort field: {sort_by}"
             )
 
-        query = ClientsRepository.get_unassign(db)
+        filters = []
+
+        filters.append(ClientsRepository.get_unassign())
 
         if search:
-            query = ClientsRepository.search(query, search)        
+            filters.append(ClientsRepository.search(search))     
 
+        query = ClientsRepository.apply_filters(db, filters)
         query = ClientsRepository.apply_sorting(query, sort_by, order)
         total_clients = ClientsRepository.count(query)
         clients = ClientsRepository.paginate(query, skip, limit)
@@ -180,7 +183,7 @@ class ClientsService:
         if query:
             raise HTTPException(status_code=400, detail="Client already exists")
         
-        assigned_user = UsersRepository.get_by_username(client.user_name)
+        assigned_user = UsersRepository.get_by_username(db, client.user_name)
 
         if current_user.role == 'manager' and assigned_user.id != current_user.id:
             raise HTTPException(
@@ -224,7 +227,7 @@ class ClientsService:
         if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")
         
-        assigned_user = UsersRepository.get_by_username(client.user_name)
+        assigned_user = UsersRepository.get_by_username(db, client.user_name)
 
         if current_user.role == 'manager' and assigned_user.id != current_user.id:
             raise HTTPException(
@@ -246,7 +249,7 @@ class ClientsService:
                                                    client.notes)
             return StatusClientsResponse(
                 status="changed",
-                users=ClientRead.model_validate(updated_client)
+                clients=ClientRead.model_validate(updated_client)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
@@ -258,7 +261,7 @@ class ClientsService:
         db: Session,
         ) -> StatusClientsResponse:
         
-        db_client = ClientsRepository.get_by_name(name)
+        db_client = ClientsRepository.get_by_name(db, name)
 
         if not db_client:
             raise HTTPException(status_code=404, detail="Client not found")

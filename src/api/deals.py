@@ -25,7 +25,7 @@ async def get_all_deals(
     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
     ):
     
-    return DealsService(
+    return DealsService.get_all(
         db=db,
         current_user=current_user,
         skip=skip,
@@ -55,7 +55,7 @@ async def get_by_date(
     earlier_than: datetime | None = Query(None, description="Filter deals created earlier than arg"),
     later_than: datetime | None = Query(None, description="Filter deals created later than arg"),
     new: bool = Query(False, description="Filter deals created earlier this mounth"),
-    related_to_curr_user: bool = Query(False, description="Filter deals related to to your user"),
+    related_to_me: bool = Query(False, description="Filter deals related to to your user"),
     related_to_user: str | None = Query(None, description="Filter deals related to user"),
     related_to_client: str | None = Query(None, description="Filter deals related to clients"),
     sort_by: str = Query("id", description="Sort by field: id, title, status, value"),
@@ -75,7 +75,7 @@ async def get_by_date(
         earlier_than=earlier_than,
         later_than=later_than,
         new=new,
-        related_to_curr_user=related_to_curr_user,
+        related_to_me=related_to_me,
         related_to_user=related_to_user,
         related_to_client=related_to_client,
         sort_by=sort_by,
@@ -99,7 +99,7 @@ async def set_close_date(
         title=title
     )
 
-@router.patch("/deals/patch/set_status", response_model=DealsListResponse, operation_id="set_status")
+@router.patch("/deals/patch/set_status", response_model=StatusDealsResponse, operation_id="set_status")
 async def set_status(
     status: DealStatus = Query("new", description="Set new status: new, in_progress or closed"),
     db: Session = Depends(get_db),
@@ -162,8 +162,8 @@ async def delete_deal(title: str = Query("", description="Delete by title"),
 
 @router.delete("/deals/delete-by-client", response_model=StatusDealsResponse, operation_id="delete-by-client")
 async def delete_by_client(
-    client_name: str = Query("", description="Delete by title"),
-    client_id: int | None = Query(None, description="Delete by id"),
+    client_name: str = Query("", description="Delete by client name"),
+    client_id: int | None = Query(None, description="Delete by client id"),
     db: Session = Depends(get_db),
     _: User = Depends(require_roles('admin')),
     ):

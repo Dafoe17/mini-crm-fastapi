@@ -15,24 +15,23 @@ class TasksRepository:
     
     @staticmethod
     def get_all_done(db: Session):
-        return db.query(Task).filter(Task.status == 'done').all()
+        return db.query(Task).filter(Task.status == 'done')
     
     @staticmethod
     def get_all_expired(db: Session):
         now = datetime.now(timezone.utc)  
-        return db.query(Task).filter(Task.due_date <= now).all()
+        return db.query(Task).filter(Task.due_date <= now)
 
     @staticmethod
     def get_by_username(db: Session, username: str):
         user_ids = db.query(User.id).filter(User.username.ilike(f"%{username}%")).subquery()
-        return Task.user_id.in_(user_ids).all()
+        return Task.user_id.in_(user_ids)
     
     @staticmethod
     def search(search: str):
         return or_(
             Task.title.ilike(f"%{search}%"),
-            Task.description.ilike(f"%{search}%"),
-            Task.status.ilike(f"%{search}%")
+            Task.description.ilike(f"%{search}%")
             )
     
     @staticmethod
@@ -44,6 +43,7 @@ class TasksRepository:
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):
+        sort_attr = getattr(Task, sort_attr, Task.title)
         query = query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc())
         return query
 
@@ -102,9 +102,12 @@ class TasksRepository:
     
     @staticmethod
     def delete_group(db: Session, query: Query) -> list:
+        tasks = query.all()
+        if not tasks:
+            return []
         query.delete(synchronize_session='fetch')
         db.commit()
-        return query
+        return tasks
 
     @staticmethod
     def rollback(db: Session):

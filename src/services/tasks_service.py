@@ -41,7 +41,7 @@ class TasksService:
         if search:
             filters.append(TasksRepository.search(search))
 
-        query = TasksRepository.apply_filters(query, sort_by, order)
+        query = TasksRepository.apply_filters(db, filters)
         query = TasksRepository.apply_sorting(query, sort_by, order)
         total_tasks = TasksRepository.count(query)
         tasks = TasksRepository.paginate(query, skip, limit)
@@ -50,7 +50,7 @@ class TasksService:
             total=total_tasks,
             skip=skip,
             limit=limit,
-            tasks=[TasksListResponse.model_validate(task) for task in tasks]
+            tasks=[TaskRead.model_validate(task) for task in tasks]
         )
 
     @staticmethod
@@ -63,9 +63,9 @@ class TasksService:
     ) -> StatusTasksResponse:
         
         if task_id:
-            db_task = TasksRepository.get_by_id(task_id)
+            db_task = TasksRepository.get_by_id(db, task_id)
         else:
-            db_task = TasksRepository.get_by_title(title)
+            db_task = TasksRepository.get_by_title(db, title)
 
         if not db_task:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -98,9 +98,9 @@ class TasksService:
     ) -> StatusTasksResponse:
         
         if task_id:
-            db_task = TasksRepository.get_by_id(task_id)
+            db_task = TasksRepository.get_by_id(db, task_id)
         else:
-            db_task = TasksRepository.get_by_title(title)
+            db_task = TasksRepository.get_by_title(db, title)
 
         if not db_task:
             raise HTTPException(status_code=404, detail="Task not found")
@@ -200,7 +200,7 @@ class TasksService:
             deleted_tasks = TasksRepository.delete_group(db, query)
             return StatusTasksResponse(
                 status="deleted",
-                tasks=TaskRead.model_validate(deleted_tasks)
+                tasks=[TaskRead.model_validate(deleted_task) for deleted_task in deleted_tasks]
             )
         
         except Exception as e:
@@ -218,7 +218,7 @@ class TasksService:
             deleted_tasks = TasksRepository.delete_group(db, query)
             return StatusTasksResponse(
                 status="deleted",
-                tasks=TaskRead.model_validate(deleted_tasks)
+                tasks=[TaskRead.model_validate(deleted_task) for deleted_task in deleted_tasks]
             )
         
         except Exception as e:

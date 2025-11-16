@@ -51,7 +51,7 @@ async def take_task(
         title=title
     )
 
-@router.put("/tasks/update", response_model=TasksListResponse, operation_id="update-task")
+@router.put("/tasks/update", response_model=StatusTasksResponse, operation_id="update-task")
 async def update_task(
     task: TaskCreate,
     db: Session = Depends(get_db),

@@ -1,6 +1,6 @@
 from sqlalchemy import or_ 
 from sqlalchemy.orm import Session
-from src.models import Client
+from src.models import Client, User
 
 class ClientsRepository:
     
@@ -18,7 +18,7 @@ class ClientsRepository:
     
     @staticmethod
     def filter_related_to_user(db: Session, username: str):
-        user_ids = db.query(Client.id).filter(Client.username.ilike(f"%{username}%"))
+        user_ids = db.query(User.id).filter(User.username.ilike(f"%{username}%"))
         Client.user_id.in_(user_ids)
         return Client.user_id.in_(user_ids)
 
@@ -35,11 +35,12 @@ class ClientsRepository:
         query = db.query(Client)
         if filters:
             query = query.filter(*filters)
-        return query.all()
+        return query
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):
-        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc()).all()
+        sort_attr = getattr(Client, sort_attr, Client.name)
+        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc())
 
     @staticmethod
     def paginate(query, skip: int | None, limit: int | None) -> list[Client]:
