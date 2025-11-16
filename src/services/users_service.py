@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 
 from src.schemas.user import UsersListResponse, StatusUsersResponse, UserRead, UserCreate
 from src.repositories.users_repository import UsersRepository
-from src.enums import SortOrder
 
 
 class UsersService:
@@ -18,7 +17,7 @@ class UsersService:
         role,
         search: str | None,
         sort_by: str,
-        order: SortOrder,
+        order: str
     ) -> UsersListResponse:
         
         if sort_by not in UsersService.ALLOWED_SORT_FIELDS:
@@ -27,18 +26,18 @@ class UsersService:
                 detail=f"Invalid sort field: {sort_by}"
             )
 
-        query = UsersRepository.base_query(db)
+        filters = []
 
         if role:
-            query = UsersRepository.filter_by_role(query, role)
+            filters.append(UsersRepository.filter_by_role(query, role))
 
         if search:
-            query = UsersRepository.search(query, search)
+            filters.append(UsersRepository.search(query, search))
 
         sort_by = "role_level" if sort_by == "role" else sort_by
 
+        query = UsersRepository.apply_filters(db, filters)
         query = UsersRepository.apply_sorting(query, sort_by, order)
-        
         total = UsersRepository.count(query)
         users = UsersRepository.paginate(query, skip, limit)
 

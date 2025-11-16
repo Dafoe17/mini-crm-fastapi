@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from src.schemas.client import ClientsListResponse, StatusClientsResponse, ClientRead, ClientCreate
 from src.repositories.clients_repository import ClientsRepository
 from src.repositories.users_repository import UsersRepository
-from src.enums import SortOrder
 
 
 class ClientsService:
@@ -21,7 +20,7 @@ class ClientsService:
         related_to_user: str | None,
         search: str | None,
         sort_by: str,
-        order: SortOrder,
+        order: str
     ) -> ClientsListResponse:
 
         if sort_by not in ClientsService.ALLOWED_SORT_FIELDS:
@@ -30,17 +29,18 @@ class ClientsService:
                 detail=f"Invalid sort field: {sort_by}"
             )
 
-        query = ClientsRepository.base_query(db)
+        filters = []
 
         if related_to_me:
-            query = ClientsRepository.filter_related_to_me(query, current_user)
-
+            related_to_user = current_user.username
+            
         if related_to_user:
-            query = ClientsRepository.filter_related_to_user(query, related_to_user)
+            filters.append(ClientsRepository.filter_related_to_user(db, related_to_user))
         
         if search:
-            query = ClientsRepository.search(query, search)        
+            filters.append(ClientsRepository.search(search))        
 
+        query = ClientsRepository.apply_filters(db, filters)
         query = ClientsRepository.apply_sorting(query, sort_by, order)
         total_clients = ClientsRepository.count(query)
         clients = ClientsRepository.paginate(query, skip, limit)
@@ -59,7 +59,7 @@ class ClientsService:
         limit: int | None,
         search: str | None,
         sort_by: str,
-        order: SortOrder,
+        order: str
     ) -> ClientsListResponse:
 
         if sort_by not in ClientsService.ALLOWED_SORT_FIELDS:
@@ -104,14 +104,14 @@ class ClientsService:
             raise HTTPException(status_code=400, detail=f"Client {db_client.name} is already assigned.")
     
         try:
-            taken_user = ClientsRepository.take_client(db, db_client, current_user.id)
+            taken_client = ClientsRepository.take_client(db, db_client, current_user.id)
             return StatusClientsResponse(
                 status="changed",
-                users=ClientRead.model_validate(taken_user)
+                clients=ClientRead.model_validate(taken_client)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
-            raise HTTPException(500, f"Failed to take user: {str(e)}")
+            raise HTTPException(500, f"Failed to take client: {str(e)}")
         
     @staticmethod
     def delegete_unassigned_client(
@@ -137,11 +137,11 @@ class ClientsService:
             delegeted_user = ClientsRepository.take_client(db, db_client, assigned_user.id)
             return StatusClientsResponse(
                 status="changed",
-                users=ClientRead.model_validate(delegeted_user)
+                clients=ClientRead.model_validate(delegeted_user)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
-            raise HTTPException(500, f"Failed to delegete user: {str(e)}")
+            raise HTTPException(500, f"Failed to delegete client: {str(e)}")
     
     @staticmethod
     def discharge(
@@ -162,11 +162,11 @@ class ClientsService:
             discharged_client = ClientsRepository.take_client(db, db_client, None)
             return StatusClientsResponse(
                 status="changed",
-                users=ClientRead.model_validate(discharged_client)
+                clients=ClientRead.model_validate(discharged_client)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
-            raise HTTPException(500, f"Failed to discharge user: {str(e)}")
+            raise HTTPException(500, f"Failed to discharge client: {str(e)}")
     
     @staticmethod
     def add_client(
@@ -201,11 +201,11 @@ class ClientsService:
                                                    client.notes)
             return StatusClientsResponse(
                 status="created",
-                users=ClientRead.model_validate(created_client)
+                clients=ClientRead.model_validate(created_client)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
-            raise HTTPException(500, f"Failed to create user: {str(e)}")
+            raise HTTPException(500, f"Failed to create client: {str(e)}")
 
     @staticmethod
     def update_client(
@@ -267,8 +267,8 @@ class ClientsService:
             deleted_client = ClientsRepository.delete(db, db_client)
             return StatusClientsResponse(
                 status="deleted",
-                users=ClientRead.model_validate(deleted_client)
+                clients=ClientRead.model_validate(deleted_client)
             )
         except Exception as e:
             ClientsRepository.rollback(db)
-            raise HTTPException(500, f"Failed to delete user: {str(e)}")
+            raise HTTPException(500, f"Failed to delete client: {str(e)}")

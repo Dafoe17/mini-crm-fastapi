@@ -19,20 +19,23 @@ class UsersRepository:
         return user
     
     @staticmethod
-    def base_query(db: Session):
-        return db.query(User)
-
+    def filter_by_role(role):
+        return User.role == role
+    
     @staticmethod
-    def filter_by_role(query, role):
-        return query.filter(User.role == role)
-
+    def search(search: str):
+        return User.username.ilike(f"%{search}%")
+    
     @staticmethod
-    def search(query, search: str):
-        return query.filter(User.username.ilike(f"%{search}%"))
+    def apply_filters(db: Session, filters: list):
+        query = db.query(User)
+        if filters:
+            query = query.filter(*filters)
+        return query.all()
 
     @staticmethod
     def apply_sorting(query, sort_attr, order: str):
-        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc())
+        return query.order_by(sort_attr.desc() if order == "desc" else sort_attr.asc()).all()
 
     @staticmethod
     def paginate(query, skip: int | None, limit: int | None) -> list[User]:

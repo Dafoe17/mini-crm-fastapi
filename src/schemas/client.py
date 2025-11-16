@@ -14,7 +14,6 @@ class ClientBase(BaseModel):
     def strip_name(cls, v):
         return v.strip()
     
-
 class ClientRead(ClientBase):
     id: int = Field(gt=0)
     

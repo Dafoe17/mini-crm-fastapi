@@ -34,7 +34,11 @@ class AuthService:
         if not user or not verify_password(password, user.password):
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        hashed_password = hash_password(new_password)
-        updated_user = UsersRepository.update_password(db, user, hashed_password)
+        try:
+            hashed_password = hash_password(new_password)
+            updated_user = UsersRepository.update_password(db, user, hashed_password)
+        except Exception as e:
+            UsersRepository.rollback(db)
+            raise HTTPException(500, f"Failed to change password: {str(e)}")
 
         return updated_user

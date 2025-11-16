@@ -6,7 +6,7 @@ from src.models import User
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
-# Get db Session
+
 def get_db():
     db: Session = Session_local()
     try:
@@ -14,7 +14,7 @@ def get_db():
     finally:
         db.close()
 
-# Get user
+
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)) -> User:
