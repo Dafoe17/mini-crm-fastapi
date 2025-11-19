@@ -1,3 +1,4 @@
+from src.core.logger import logger
 from fastapi import APIRouter, Depends, Form
 from src.api.dependencies import get_db, Session
 
@@ -11,6 +12,7 @@ async def login(
     password: str = Form(),
     db: Session = Depends(get_db)
 ):
+    logger.info('User %s trying to login', username)
     return AuthService.login(db, username, password)
 
 
@@ -20,5 +22,6 @@ async def change_password(
     password: str,
     new_password: str,
     db: Session = Depends(get_db)
-):
+): 
+    logger.info('User %s requested password change', username)
     return AuthService.change_password(db, username, password, new_password)

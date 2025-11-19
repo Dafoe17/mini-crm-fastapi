@@ -1,3 +1,4 @@
+from src.core.logger import logger
 from fastapi import APIRouter, Depends, Query
 from src.api.dependencies import Session, get_db, require_roles
 
@@ -24,7 +25,12 @@ async def get_all_deals(
     sort_by: str = Query("id", description="Sort by field: id, title, status, value"),
     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
     ):
-    
+    logger.info('User %s requested info about all deals with attributes: ' \
+                'skip=%s, limit=%s, search=%s, more_than=%s, less_than=%s, ' \
+                'related_to_me=%s, related_to_user=%s, related_to_client=%s, '
+                'sort_by=%s, order=%s', 
+                current_user.username, skip, limit, search, more_than, less_than, 
+                related_to_me, related_to_user, related_to_client, sort_by, order)
     return DealsService.get_all(
         db=db,
         current_user=current_user,
@@ -61,7 +67,12 @@ async def get_by_date(
     sort_by: str = Query("id", description="Sort by field: id, title, status, value"),
     order: SortOrder = Query("asc", description="Sort order: asc or desc"),
     ):
-
+    logger.info('User %s requested info about all deals by date with attributes: ' \
+                'skip=%s, limit=%s, date_field=%s, search=%s, more_than=%s, less_than=%s, ' \
+                'exact_date=%s, related_to_me=%s, related_to_user=%s, related_to_client=%s, '
+                'sort_by=%s, order=%s', 
+                current_user.username, skip, limit, date_field, search, more_than, less_than, 
+                exact_date, related_to_me, related_to_user, related_to_client, sort_by, order)
     return DealsService.get_by_date(
         db=db,
         current_user=current_user,
@@ -90,7 +101,8 @@ async def set_close_date(
     deal_id: int | None = Query(None, description="Search deal by id"),
     title: str = Query("", description="Search deal by title"),
     ):
-
+    logger.info('User %s requested set close date (%s) for deal (%s, %s)', 
+                current_user.username, date, deal_id, title)
     return DealsService.set_close_date(
         date=date,
         db=db,
@@ -107,7 +119,8 @@ async def set_status(
     deal_id: int | None = Query(None, description="Search deal by id"),
     title: str = Query("", description="Search deal by title"),
     ):
-    
+    logger.info('User %s requested set status (%s) for deal (%s, %s)', 
+                current_user.username, status, deal_id, title)
     return DealsService.set_status(
         status=status,
         db=db,
@@ -122,7 +135,8 @@ async def add_deal(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin', 'manager')),
     ):
-
+    logger.info('User %s requested create deal (%s)', 
+                current_user.username, deal.title)
     return DealsService.add_deal(
         deal=deal,
         db=db,
@@ -137,8 +151,8 @@ async def update_deal(
     deal_id: int | None = Query(None, description="Search deal by id"),
     title: str = Query("", description="Search deal by title"),
     ):
-    
-
+    logger.info('User %s requested update deal (%s, %s)', 
+                current_user.username, deal_id, title)
     return DealsService.update_deal(
         deal=deal,
         db=db,
@@ -151,9 +165,10 @@ async def update_deal(
 async def delete_deal(title: str = Query("", description="Delete by title"),
                       deal_id: int | None = Query(None, description="Delete by id"),
                       db: Session = Depends(get_db),
-                      _: User = Depends(require_roles('admin')),
+                      current_user: User = Depends(require_roles('admin')),
                       ):
-
+    logger.info('User %s requested delete deal (%s, %s)', 
+                current_user.username, deal_id, title)
     return DealsService.delete_deal(
         title=title,
         deal_id=deal_id,
@@ -165,9 +180,10 @@ async def delete_by_client(
     client_name: str = Query("", description="Delete by client name"),
     client_id: int | None = Query(None, description="Delete by client id"),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin')),
+    current_user: User = Depends(require_roles('admin')),
     ):
-
+    logger.info('User %s requested delete deal by client (%s, %s)', 
+                current_user.username, client_id, client_name)
     return DealsService.delete_deal_by_client(
         client_name=client_name,
         client_id=client_id,

@@ -1,3 +1,4 @@
+from src.core.logger import logger
 from fastapi import APIRouter, Query, Depends
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
@@ -21,7 +22,10 @@ async def get_all_clients(
     sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
     order: SortOrder = Query("asc", description="Sort order: asc or desc")
     ):
-
+    logger.info('User %s requested info about all clients with attributes: ' \
+                'skip=%s, limit=%s, search=%s, related_to_me=%s, related_to_user=%s, ' \
+                'sort_by=%s,order=%s', 
+                current_user.username, skip, limit, search, related_to_me, related_to_user, sort_by, order)
     return ClientsService.get_all(
         db=db,
         current_user=current_user,
@@ -36,14 +40,16 @@ async def get_all_clients(
 
 @router.get("/clients/get/unassigned_clients", response_model=ClientsListResponse, operation_id="get-unassigned-clients")
 async def get_unassigned_clients(db: Session = Depends(get_db), 
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     skip: int | None = Query(None, description="Number of clients to skip"),
     limit: int | None = Query(None, description="Number of clients to return"),
     search: str | None = Query(None, description="Search by name, email or phone"),
     sort_by: str = Query("id", description="Sort by field: id, name, email, phone"),
     order: SortOrder = Query("asc", description="Sort order: asc or desc")
     ):
-
+    logger.info('User %s requested info about all unassigned clients with attributes: ' \
+                'skip=%s, limit=%s, search=%s, sort_by=%s, order=%s', 
+                current_user.username, skip, limit, search, sort_by, order)
     return ClientsService.get_unassigned_clients(
         db=db,
         skip=skip,
@@ -60,7 +66,8 @@ async def take_unassigned_client(
     client_id: int | None = Query(None, description="Search client by id"),
     name: str = Query("", description="Search client by name")
     ):
-
+    logger.info('User %s requested take unassigned client (%s, %s)', 
+                current_user.username, client_id, name) 
     return ClientsService.take_unassigned_client(
         db=db,
         current_user=current_user,
@@ -71,12 +78,13 @@ async def take_unassigned_client(
 @router.patch("/clients/patch/delegate_client", response_model=StatusClientsResponse, operation_id="delegete-unassigned-client")
 async def delegete_unassigned_client(
     db: Session = Depends(get_db), 
-    _: User = Depends(require_roles('admin')),
+    current_user: User = Depends(require_roles('admin')),
     username: str = Query('User', description="Search user by name"),
     client_id: int | None = Query(None, description="Search client by id"),
     name: str = Query("", description="Search client by name")
     ):
-    
+    logger.info('User %s requested delegete unassigned client (%s, %s) to %s', 
+                current_user.username, client_id, name, username)     
     return ClientsService.delegete_unassigned_client(
          db=db,
          username=username,
@@ -87,11 +95,12 @@ async def delegete_unassigned_client(
 @router.patch("/clients/patch/discharge", response_model=StatusClientsResponse, operation_id="discharge")
 async def discharge(
     db: Session = Depends(get_db), 
-    _: User = Depends(require_roles('admin')),
+    current_user: User = Depends(require_roles('admin')),
     client_id: int | None = Query(None, description="Search client by id"),
     name: str = Query("", description="Search client by name")
     ):
-
+    logger.info('User %s requested discharge unassigned client (%s, %s)', 
+                current_user.username, client_id, name)     
     return ClientsService.discharge(
          db=db,
          client_id=client_id,
@@ -104,7 +113,8 @@ async def add_client(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin', 'manager')),
     ):
-
+    logger.info('User %s requested add client (%s, %s)', 
+                current_user.username, client.name)     
     return ClientsService.add_client(
          client=client,
          db=db,
@@ -119,7 +129,8 @@ async def update_client(
     client_id: int | None = Query(None, description="Search by id"),
     name: str = Query("", description="Search by name"),
     ):
-
+    logger.info('User %s requested update client (%s, %s)', 
+                current_user.username, client_id, name)  
     return ClientsService.update_client(
         client=client,
         db=db,
@@ -132,9 +143,10 @@ async def update_client(
 async def delete_client(
     name: str = Query("", description="Delete by name"),
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin')),
+    current_user: User = Depends(require_roles('admin')),
     ):
-
+    logger.info('User %s requested delete client (%s, %s)', 
+                current_user.username, name)  
     return ClientsService.delete_client(
         name=name,
         db=db

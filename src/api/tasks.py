@@ -1,3 +1,4 @@
+from src.core.logger import logger
 from fastapi import APIRouter, HTTPException, Depends, Query
 from src.api.dependencies import Session, get_db, get_current_user, require_roles
 
@@ -21,7 +22,10 @@ async def get_tasks(
     sort_by: str = Query("id", description="Sort by field: id, title, status"),
     order: SortOrder = Query("asc", description="Sort order: asc or desc")
     ):
-
+    logger.info('User %s requested info about all tasks with attributes: ' \
+                'skip=%s, limit=%s, search=%s, related_to_user=%s, my_tasks=%s ' \
+                'sort_by=%s,order=%s', 
+                current_user.username, skip, limit, search, related_to_user, my_tasks, sort_by, order)
     return TasksService.get_all(
         db=db,
         current_user=current_user,
@@ -42,7 +46,8 @@ async def take_task(
     task_id: int | None = Query(None, description="Search task by id"),
     title: str = Query("", description="Search task by title"),
     ):
-
+    logger.info('User %s requested take task (%s, %s) with status %s',
+                current_user.username, task_id, title, status)
     return TasksService.take_task(
         db=db,
         status=status,
@@ -55,11 +60,12 @@ async def take_task(
 async def update_task(
     task: TaskCreate,
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin', 'manager')),
+    current_user: User = Depends(require_roles('admin', 'manager')),
     task_id: int | None = Query(None, description="Search task by id"),
     title: str = Query("", description="Search task by title"),
     ):
-
+    logger.info('User %s requested update task (%s, %s)',
+                current_user.username, task_id, title)
     return TasksService.update_task(
         task=task,
         db=db,
@@ -71,9 +77,10 @@ async def update_task(
 async def add_task(
     task: TaskCreate, 
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin', 'manager'))
+    current_user: User = Depends(require_roles('admin', 'manager'))
     ):
-    
+    logger.info('User %s requested add task (%s)',
+                current_user.username, task.title)
     return TasksService.add(
         task=task,
         db=db
@@ -82,11 +89,12 @@ async def add_task(
 @router.delete("/tasks/delete-taks", response_model=StatusTasksResponse, operation_id="delete-task")
 async def delete_task(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin', 'manager')),
+    current_user: User = Depends(require_roles('admin', 'manager')),
     task_id: int | None = Query(None, description="Search task by id"),
     title: str = Query("", description="Search task by title")
     ):
-
+    logger.info('User %s requested add task (%s, %s)',
+                current_user.username, task_id, title)
     if task_id:
         db_task = db.query(Task).filter(Task.id == task_id).first()
     else:
@@ -113,11 +121,12 @@ async def delete_task(
     return response
 
 @router.delete("/tasks/delete-done-task", response_model=StatusTasksResponse, operation_id="delete-done-tasks")
-async def delete_done_task(
+async def delete_done_tasks(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin', 'manager')),
+    current_user: User = Depends(require_roles('admin', 'manager')),
     ):
-
+    logger.info('User %s requested delete done tasks',
+                current_user.username)
     return TasksService.delete_done_tasks(
         db=db
     )
@@ -125,9 +134,10 @@ async def delete_done_task(
 @router.delete("/tasks/delete-expired-task", response_model=StatusTasksResponse, operation_id="delete-expired-tasks")
 async def delete_expired_task(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles('admin', 'manager')),
+    current_user: User = Depends(require_roles('admin', 'manager')),
     ):
-
+    logger.info('User %s requested expired tasks',
+                current_user.username)
     return TasksService.delete_expired_tasks(
         db=db
     )

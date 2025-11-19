@@ -1,3 +1,4 @@
+from src.core.logger import logger
 from passlib.context import CryptContext
 from datetime import datetime, timezone, timedelta
 from src.core.config import settings
@@ -9,12 +10,15 @@ class JWTValidationError(Exception):
     pass
 
 def hash_password(password: str) -> str:
+    logger.debug('Hashing password')
     return argon2_context.hash(password)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
+    logger.debug('Verifying password')
     return argon2_context.verify(plain_password, hashed_password)
 
 def create_access_token(data: dict) -> str:
+    logger.debug('Creating acess token')
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})

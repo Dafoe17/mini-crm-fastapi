@@ -1,9 +1,7 @@
+from src.core.logger import logger
 from fastapi import FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
 from src.api import main_router
-
-import warnings
-warnings.simplefilter("always")
 
 app = FastAPI()
 
@@ -13,3 +11,4 @@ async def validation_exception_handler(request, exc: RequestValidationError):
     raise HTTPException(status_code=400, detail=msg)
 
 app.include_router(main_router)
+logger.info('Initializing the application')
