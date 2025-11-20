@@ -1,0 +1,14 @@
+FROM python:3.14
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY src/ ./src
+COPY alembic.ini .
+
+RUN mkdir -p logs
+
+CMD ["python", "-m", "src.main"]
