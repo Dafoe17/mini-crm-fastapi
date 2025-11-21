@@ -12,7 +12,7 @@ fake = Faker()
 def fake_users():
     db = next(override_get_db())
     users = []
-    for i in range(20):
+    for _ in range(20):
         user = User(
             username=fake.user_name(),
             password=hash_password("password1!"),

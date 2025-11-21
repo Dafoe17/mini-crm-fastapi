@@ -1,3 +1,8 @@
+import pytest
+
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.post
 def test_add_user_admin(client, admin_auth_headers):
     new_user = {
         "username": "newuser",
@@ -13,6 +18,9 @@ def test_add_user_admin(client, admin_auth_headers):
     assert data["status"] == "created"
     assert data["users"]["username"] == "newuser"
 
+@pytest.mark.users_api
+@pytest.mark.non_admin
+@pytest.mark.post
 def test_add_user_non_admin(client, user_auth_headers):
     new_user = {
         "username": "newuser",
@@ -23,6 +31,9 @@ def test_add_user_non_admin(client, user_auth_headers):
     response = client.post("/users/add", headers=user_auth_headers, json=new_user)
     assert response.status_code == 403
 
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.post
 def test_add_user_invalid_password(client, admin_auth_headers):
     new_user = {
         "username": "newuser",
@@ -34,6 +45,9 @@ def test_add_user_invalid_password(client, admin_auth_headers):
     assert response.status_code == 400
     assert "Invalid password. " in response.text
 
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.post
 def test_add_user_already_exists(client, admin_auth_headers):
     new_user = {
         "username": "testadmin",
@@ -45,6 +59,9 @@ def test_add_user_already_exists(client, admin_auth_headers):
     assert response.status_code == 400
     assert "already exists" in response.text
 
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.post
 def test_add_user_role_out_of_enum(client, admin_auth_headers):
     new_user = {
         "username": "testadmin",
@@ -56,6 +73,9 @@ def test_add_user_role_out_of_enum(client, admin_auth_headers):
     assert response.status_code == 400
     assert "Input should be" in response.text
 
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.post
 def test_add_user_with_short_name(client, admin_auth_headers):
     new_user = {
         "username": "r",

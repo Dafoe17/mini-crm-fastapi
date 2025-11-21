@@ -1,3 +1,8 @@
+import pytest
+
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.delete
 def test_delete_user_admin(client, admin_auth_headers):
     new_user_for_delete = {
         "username": "newuser",
@@ -18,6 +23,9 @@ def test_delete_user_admin(client, admin_auth_headers):
     assert data["status"] == "deleted"
     assert data["users"]["username"] == "newuser"
 
+@pytest.mark.users_api
+@pytest.mark.non_admin
+@pytest.mark.delete
 def test_delete_user_non_admin(client, admin_auth_headers, user_auth_headers):
     new_user_for_delete = {
         "username": "newuser",
@@ -32,10 +40,14 @@ def test_delete_user_non_admin(client, admin_auth_headers, user_auth_headers):
 
     response = client.delete(f"/users/delete/{username}", headers=user_auth_headers)
     assert response.status_code == 403
+    assert "Access denied" in response.text
 
     response = client.delete(f"/users/delete/{username}", headers=admin_auth_headers)
     assert response.status_code == 200
 
+@pytest.mark.users_api
+@pytest.mark.admin
+@pytest.mark.delete
 def test_delete_user_not_exists(client, admin_auth_headers):
 
     username = "any_name"
