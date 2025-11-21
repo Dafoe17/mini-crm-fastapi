@@ -1,7 +1,6 @@
 import pytest
 from faker import Faker
 from src.models import Client
-from src.core.security import hash_password
 from tests.conftest import override_get_db
 
 fake = Faker("ru_RU")

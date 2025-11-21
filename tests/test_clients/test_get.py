@@ -15,7 +15,7 @@ def test_get_all_clients_admin(client, admin_auth_headers, fake_clients):
         assert len(data["clients"]) == 10
     
 @pytest.mark.clients_api
-@pytest.mark.admin
+@pytest.mark.non_admin
 @pytest.mark.get
 def test_get_all_clients_non_admin(client, user_auth_headers):
     response = client.get("/clients/get?skip=0&limit=10", headers=user_auth_headers)
