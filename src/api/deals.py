@@ -111,7 +111,7 @@ async def set_close_date(
         title=title
     )
 
-@router.patch("/deals/patch/set_status", response_model=StatusDealsResponse, operation_id="set_status")
+@router.patch("/deals/patch/set-status", response_model=StatusDealsResponse, operation_id="set-status")
 async def set_status(
     status: DealStatus = Query("new", description="Set new status: new, in_progress or closed"),
     db: Session = Depends(get_db),

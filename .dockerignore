@@ -3,6 +3,8 @@
 *.pyc
 *.pyo
 
+tests
+
 .venv
 venv
 

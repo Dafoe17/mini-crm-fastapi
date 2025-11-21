@@ -259,9 +259,9 @@ class DealsService:
 
         try:
             logger.debug('Trying set deal status')
-            updated_deal = ClientsRepository.update(db, 
+            updated_deal = DealsRepository.update(db, 
                                                     db_deal,
-                                                    client_id,
+                                                    client_id.id,
                                                     db_deal.title,
                                                     status,
                                                     db_deal.value,

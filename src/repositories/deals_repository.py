@@ -109,14 +109,14 @@ class DealsRepository:
     def update(db : Session, 
                deal : Deal,
                client_id : int,
-               tittle : str,
+               title : str,
                status : str,
                value : int,
                closed_at : datetime
                ) -> Deal:
         
         deal.client_id = client_id
-        deal.tittle = tittle
+        deal.title = title
         deal.status = status
         deal.value = value
         deal.closed_at = closed_at
