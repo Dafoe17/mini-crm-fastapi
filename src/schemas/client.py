@@ -1,13 +1,11 @@
-from pydantic import BaseModel, ConfigDict, StringConstraints, EmailStr, Field, field_validator
-from typing import Optional, List, Annotated, Union
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+from typing import Optional, List, Union
 from src.enums import ActionStatus
-
-PhoneStr = Annotated[str, StringConstraints(pattern=r"^\+?(7|8)\d{10}$")]
 
 class ClientBase(BaseModel):
     name: str = Field(max_length=50, min_length=2, json_schema_extra={"strip_whitespace": True})
-    email: EmailStr
-    phone: PhoneStr
+    email: Optional[EmailStr] = Field(default="")
+    phone: Optional[str] = Field(default="")
     notes: Optional[str] = Field(default="")
 
     @field_validator("name")

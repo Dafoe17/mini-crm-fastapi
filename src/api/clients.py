@@ -59,7 +59,7 @@ async def get_unassigned_clients(db: Session = Depends(get_db),
         order=order
     )
 
-@router.patch("/clients/patch/take_client", response_model=StatusClientsResponse, operation_id="take-unassigned-client")
+@router.patch("/clients/patch/take", response_model=StatusClientsResponse, operation_id="take-unassigned-client")
 async def take_unassigned_client(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user),
@@ -75,11 +75,11 @@ async def take_unassigned_client(
         name=name
     )
 
-@router.patch("/clients/patch/delegate_client", response_model=StatusClientsResponse, operation_id="delegete-unassigned-client")
+@router.patch("/clients/patch/delegate", response_model=StatusClientsResponse, operation_id="delegete-unassigned-client")
 async def delegete_unassigned_client(
     db: Session = Depends(get_db), 
     current_user: User = Depends(require_roles('admin')),
-    username: str = Query('User', description="Search user by name"),
+    username: str = Query('User', description="Delegeted user username"),
     client_id: int | None = Query(None, description="Search client by id"),
     name: str = Query("", description="Search client by name")
     ):
@@ -113,7 +113,7 @@ async def add_client(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin', 'manager')),
     ):
-    logger.info('User %s requested add client (%s, %s)', 
+    logger.info('User %s requested add client (%s)', 
                 current_user.username, client.name)     
     return ClientsService.add_client(
          client=client,
@@ -139,13 +139,13 @@ async def update_client(
         name=name
     )
 
-@router.delete("/clients/delete/", response_model=StatusClientsResponse, operation_id="delete-client")
+@router.delete("/clients/delete/{name}", response_model=StatusClientsResponse, operation_id="delete-client")
 async def delete_client(
-    name: str = Query("", description="Delete by name"),
+    name: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin')),
     ):
-    logger.info('User %s requested delete client (%s, %s)', 
+    logger.info('User %s requested delete client (%s)', 
                 current_user.username, name)  
     return ClientsService.delete_client(
         name=name,
