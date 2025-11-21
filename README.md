@@ -61,7 +61,7 @@ Use .env.example as a template
    docker run --name=server -p 9090:8000 --env-file .env image
    ```
 
-3.1 or Run locally
+3.1. or Run locally
   ```bash
   pip install -r requirements.txt
   alembic upgrade head
