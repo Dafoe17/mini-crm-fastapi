@@ -71,13 +71,13 @@ Use .env.example as a template
 5. Swagger / API Docs
 Visit: http://localhost:8000/docs for API documentation
 
-for Running Tests:
+🧪for Running Tests:
   ```bash
   pip install -r requirements-dev.txt
   pytest -vv
   ```
 
-for Database Migrations:
+⚙️for Database Migrations:
   ```bash
   alembic revision --autogenerate -m "describe change"
   alembic upgrade head
