@@ -61,14 +61,14 @@ Use .env.example as a template
    docker run --name=server -p 9090:8000 --env-file .env image
    ```
 
-3.1. or Run locally
+4. Or run locally
   ```bash
   pip install -r requirements.txt
   alembic upgrade head
   uvicorn src.main:app --reload
   ```
 
-4. Swagger / API Docs
+5. Swagger / API Docs
 Visit: http://localhost:8000/docs for API documentation
 
 for Running Tests:
