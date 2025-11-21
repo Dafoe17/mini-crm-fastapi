@@ -86,7 +86,7 @@ async def add_task(
         db=db
     )
 
-@router.delete("/tasks/delete-taks", response_model=StatusTasksResponse, operation_id="delete-task")
+@router.delete("/tasks/delete", response_model=StatusTasksResponse, operation_id="delete-task")
 async def delete_task(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin', 'manager')),
