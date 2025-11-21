@@ -76,5 +76,5 @@ def test_add_client_user_already_exists(client, admin_auth_headers, test_admin):
 
     response = client.post(f"/clients/add", 
                             headers=admin_auth_headers, json=new_client)
-    assert response.status_code == 400
+    assert response.status_code == 409
     assert 'Client already exists' in response.text

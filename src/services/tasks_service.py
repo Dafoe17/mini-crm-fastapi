@@ -165,7 +165,7 @@ class TasksService:
         
         if TasksRepository.get_by_title(db, task.title):
             logger.warning('Task already exists')
-            raise HTTPException(status_code=404, detail='Task already exists')
+            raise HTTPException(status_code=409, detail='Task already exists')
         
         user_id = None
         user_name = task.user_name

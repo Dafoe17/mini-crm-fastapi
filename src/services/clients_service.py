@@ -234,7 +234,7 @@ class ClientsService:
 
         if query:
             logger.warning('Client already exists')
-            raise HTTPException(status_code=400, detail="Client already exists")
+            raise HTTPException(status_code=409, detail="Client already exists")
         
         logger.debug('Getting assigned user')
         assigned_user = UsersRepository.get_by_username(db, client.user_name)

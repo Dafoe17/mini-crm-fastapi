@@ -56,7 +56,7 @@ def test_add_user_already_exists(client, admin_auth_headers):
     }
 
     response = client.post("/users/add", headers=admin_auth_headers, json=new_user)
-    assert response.status_code == 400
+    assert response.status_code == 409
     assert "already exists" in response.text
 
 @pytest.mark.users_api

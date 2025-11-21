@@ -89,3 +89,20 @@ def test_post_deal_invalid_client_name(client, admin_auth_headers):
                             headers=admin_auth_headers, json=new_deal)
     assert response.status_code == 404
     assert "Client not found" in response.text
+
+@pytest.mark.deals_api
+@pytest.mark.admin
+@pytest.mark.post
+def test_post_deal_admin(client, admin_auth_headers, fake_deal, fake_client_with_no_user):
+    new_deal = {
+        "title": fake_deal.title,
+        "status": "new",
+        "value": 10000,
+        "closed_at": None,
+        "client_name": fake_client_with_no_user.name
+    }
+
+    response = client.post(f"/deals/add", 
+                            headers=admin_auth_headers, json=new_deal)
+    assert response.status_code == 409
+    assert "Deal already exists" in response.text

@@ -116,7 +116,7 @@ class UsersService:
         
         if db_user:
             logger.warning('User (%s) already exists', db_user.username)
-            raise HTTPException(status_code=400, detail="User already exists")
+            raise HTTPException(status_code=409, detail="User already exists")
 
         try:
             logger.debug('Trying to add user')

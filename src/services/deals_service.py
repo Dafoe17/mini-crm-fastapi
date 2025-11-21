@@ -344,7 +344,7 @@ class DealsService:
 
         if query:
             logger.warning('Deal already exists')
-            raise HTTPException(status_code=400, detail="Deal already exists")
+            raise HTTPException(status_code=409, detail="Deal already exists")
         
         assigned_client = ClientsRepository.get_by_name(db, deal.client_name)
 
