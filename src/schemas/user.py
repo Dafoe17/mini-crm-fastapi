@@ -33,13 +33,17 @@ class UserCreate(UserBase):
     @field_validator('password')
     def password_strength_check(cls, value):
         if len(value) < 6:
-            raise ValueError("Password must be at least 6 characters long")
+            raise ValueError("Invalid password. " \
+            "Password must be at least 6 characters long")
         if not re.search(PASSWORD_REGEX["letter"], value):
-            raise ValueError("Password must contain at least one letter")
+            raise ValueError("Invalid password. " \
+            "Password must contain at least one letter")
         if not re.search(PASSWORD_REGEX["digit"], value):
-            raise ValueError("Password must contain at least one number")
+            raise ValueError("Invalid password. " \
+            "Password must contain at least one number")
         if not re.search(PASSWORD_REGEX["special"], value):
-            raise ValueError("Password must contain at least one special symbols (!.,_)")
+            raise ValueError("Invalid password. " \
+            "Password must contain at least one special symbols (!.,_)")
         return hash_password(value)
 
 class StatusUsersResponse(BaseModel):

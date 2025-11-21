@@ -73,10 +73,10 @@ async def add_user(
         db=db,
     )
 
-@router.put("/users/update/{user_id}", response_model=StatusUsersResponse, operation_id="update-user")
+@router.put("/users/update/{username}", response_model=StatusUsersResponse, operation_id="update-user")
 async def update_user(
+    username: str,
     user: UserCreate,
-    username: str = Query(description="Search by username"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin')),
     ):
@@ -87,9 +87,9 @@ async def update_user(
         db=db,
     )
 
-@router.delete("/users/delete/{user_id}", response_model=StatusUsersResponse, operation_id="delete-user")
+@router.delete("/users/delete/{username}", response_model=StatusUsersResponse, operation_id="delete-user")
 async def delete_user(
-    username: str = Query(description="Search by user name"), 
+    username: str, 
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles('admin'))
     ):

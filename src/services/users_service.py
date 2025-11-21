@@ -147,9 +147,9 @@ class UsersService:
 
         db_user = UsersRepository.get_by_username(db, username)
         
-        if db_user:
-            logger.warning('User (%s) already exists', db_user.username)
-            raise HTTPException(status_code=404, detail="User already exists")
+        if not db_user:
+            logger.warning('User (%s) not found')
+            raise HTTPException(status_code=404, detail="User not found")
 
         try:
             logger.debug('Trying to update user')
@@ -175,7 +175,7 @@ class UsersService:
         db_user = UsersRepository.get_by_username(db, username)
         
         if not db_user:
-            logger.warning('User (%s) not exists', username)
+            logger.warning('User (%s) not found', username)
             raise HTTPException(status_code=404, detail="User not found")
 
         try:
