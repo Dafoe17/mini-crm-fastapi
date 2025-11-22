@@ -30,19 +30,7 @@ Includes authentication (JWT), role-based access control, logging, migrations, D
 - Logging via `logging.config`
 
 ## 🏗 Architecture
-src/
-  api/ # FastAPI controllers / routers
-  services/ # Business logic
-  repositories/ # Database access (SQLAlchemy)
-  schemas/ # Pydantic models
-  core/ # Config, logging, security
-  database.py # DB setup
-  models.py # ORM models
-  enums.py
-  main.py # Application entry point
-  migrations/ # Alembic migrations
-tests/ # Pytest test suite
-
+![Architecture](docs/architecture.png)
 
 ## 🚀 Getting Started
 
@@ -71,13 +59,13 @@ Use .env.example as a template
 5. Swagger / API Docs
 Visit: http://localhost:8000/docs for API documentation
 
-🧪for Running Tests:
+🧪 for Running Tests:
   ```bash
   pip install -r requirements-dev.txt
   pytest -vv
   ```
 
-⚙️for Database Migrations:
+⚙️ for Database Migrations:
   ```bash
   alembic revision --autogenerate -m "describe change"
   alembic upgrade head
